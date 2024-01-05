@@ -1,0 +1,14 @@
+name = "REPLSmuggler"
+uuid = "ad7bff83-59f0-4382-9fe5-c2ac8aa77434"
+authors = ["Hugo Levy-Falk <hugo@klafyvel.me> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Aqua", "Test"]
