@@ -3,8 +3,26 @@ uuid = "ad7bff83-59f0-4382-9fe5-c2ac8aa77434"
 authors = ["Hugo Levy-Falk <hugo@klafyvel.me> and contributors"]
 version = "0.1.0"
 
+[deps]
+AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
+BaseDirs = "18cc8868-cbac-4acf-b575-c8ff214dc66f"
+MsgPack = "99f44e22-a591-53d1-9472-aa23ef4bd671"
+Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"
+
+# [weakdeps]
+# JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+#
+# [extensions]
+# JSON3Serializer = "JSON3"
+
 [compat]
-julia = "1"
+julia = "1.8"
+AbstractTrees = "0.4"
+Aqua = "0.8"
+BaseDirs = "1"
+MsgPack = "1"
+Sockets = "1"
+Test = "1"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"

@@ -6,5 +6,7 @@ using Aqua
     @testset "Code quality (Aqua.jl)" begin
         Aqua.test_all(REPLSmuggler)
     end
+    include("protocol.jl")
+    include("msgpackserializer.jl")
     # Write your tests here.
 end
