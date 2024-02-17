@@ -48,17 +48,17 @@ using REPLSmuggler.Protocols
     response = take!(chan)
     @test test_response(response, (
         Protocols.RESPONSE,
-        UInt32(1),
+        1,
         ("ErrorException", string(ErrorException("Foo")),
-        [
-            ("foo.jl", UInt32(1), "foo()"),
-            ("bar.jl", UInt32(2), "bar()"),
+            [
+                ("foo.jl", 1, "foo()"),
+                ("bar.jl", 2, "bar()"),
             ]),
         nothing
     ))
 
     # Result
-    Protocols.serialize(protocol, Protocols.Result( 1, "foo"))
+    Protocols.serialize(protocol, Protocols.Result(1, "foo"))
     @test isready(chan)
     response = take!(chan)
     @test test_response(response, (
@@ -105,7 +105,7 @@ using REPLSmuggler.Protocols
     function dispatch(args...)
         put!(dispatched, args)
     end
-    
+
     put!(chan, evalrequest)
     Protocols.dispatchonmessage(protocol, dispatch, "foo")
     @test isready(dispatched)
