@@ -10,5 +10,5 @@ Documentation for [REPLSmuggler](https://github.com/klafyvel/REPLSmuggler.jl).
 ```
 
 ```@autodocs
-Modules = [REPLSmuggler]
+Modules = [REPLSmuggler, REPLSmugler.Protocols]
 ```
