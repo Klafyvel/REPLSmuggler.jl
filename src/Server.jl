@@ -118,7 +118,7 @@ function evaluate_entries(session)
     end
 end
 
-function treatrequest(::Val{:interrupt}, session, repl_backend, msgid, _)
+function treatrequest(::Val{:interrupt}, session, repl_backend, msgid)
     @debug "Scheduling an interrupt." session repl_backend
     schedule(repl_backend, InterruptException(); error=true)
     put!(session.responsechannel, Protocols.Result(msgid, "Done."))
@@ -127,7 +127,9 @@ function treatrequest(::Val{:eval}, session, repl_backend, msgid, file, line, co
     @debug "Adding an entry." msgid file line session repl_backend
     put!(session.entrychannel, (msgid, file, line, code))    
 end
-function treatrequest(::Val{:exit}, session, repl_backend, msgid, _)
+function treatrequest(::Val{:exit}, session, repl_backend, msgid)
+    @debug "Scheduling an interrupt." session repl_backend
+    schedule(repl_backend, InterruptException(); error=true)
     @debug "Exiting" session repl_backend
     close(session)
     put!(session.responsechannel, Protocols.Result(msgid, "Done."))
@@ -138,7 +140,8 @@ function deserialize_requests(session::Session, repl_backend)
             Protocols.dispatchonmessage(session, treatrequest, session, repl_backend)
         catch exc
             if exc isa Protocols.ProtocolException
-                put!(session.responsechannel, exc)
+                @error exc
+                put!(session.responsechannel, Protocols.Error(exc))
             elseif !isopen(session)
                 break
             else
