@@ -6,7 +6,7 @@ DocMeta.setdocmeta!(REPLSmuggler, :DocTestSetup, :(using REPLSmuggler); recursiv
 makedocs(;
     modules=[REPLSmuggler],
     authors="Hugo Levy-Falk <hugo@klafyvel.me> and contributors",
-    repo="https://github.com/klafyvel/REPLSmuggler.jl/blob/{commit}{path}#{line}",
+    repo="https://github.com/Klafyvel/REPLSmuggler.jl/blob/{commit}{path}#{line}",
     sitename="REPLSmuggler.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
@@ -20,6 +20,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/klafyvel/REPLSmuggler.jl",
+    repo="github.com/Klafyvel/REPLSmuggler.jl",
     devbranch="main",
 )
