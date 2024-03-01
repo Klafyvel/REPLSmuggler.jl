@@ -9,6 +9,10 @@
 
 </div>
 
+## Summary
+
+REPLSmuggler is meant to evaluate code coming from various clients in your REPL. The main goal is for an editor to send a bunch of lines of code with some metadata giving the name of the file and the line. `REPLSmuggler` will evaluate the code and send back the return value. If an error is raised, it will send the traceback to the client.
+
 ## Usage
 
 For now functionalities are quite basic:

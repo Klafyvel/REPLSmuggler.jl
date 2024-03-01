@@ -1,3 +1,6 @@
+"""
+The default serializer for REPLSmuggler.jl
+"""
 module MsgPackSerializer
 
 using MsgPack

@@ -1,3 +1,10 @@
+"""
+Implementation of the server for REPLSmuggler.jl -the brain of REPSmuggler.jl.
+
+The handling of the communication protocol is done by [`Protocols`](@ref).
+
+The implementation is heavily inspired by the server from [RemoteREPL.jl](https://github.com/c42f/RemoteREPL.jl).
+"""
 module Server
 using AbstractTrees
 
@@ -7,20 +14,27 @@ export Session, Smuggler, serve_repl
 
 function io end
 
+"""
+The session of a client.
+"""
 struct Session{T}
+    "Where the incoming requests are buffered."
     entrychannel::Channel
+    "Where the outgoing requests are buffered."
     responsechannel::Channel
+    "A session might store additional parameters here."
     sessionparams::Dict
+    "The module where the code should be evaluated (currently: Main)"
     evaluatein::Module
+    "The actual structure where the data are coming from. Example: a `Base.PipeEndpoint`."
     smugglerspecific::T
+    "The specific [`Protocols.Protocol`](@ref) used in this session."
     protocol::Protocols.Protocol
 end
 Session(specific, serializer) = Session(Channel(1), Channel(1), Dict(), Main, specific, Protocols.Protocol(serializer, io(specific)))
-
 function Base.show(io::IO, ::Session{T}) where T
     print(io, "Session{$T}()")
 end
-
 Base.isopen(s::Session) = isopen(s.smugglerspecific)
 function Base.close(s::Session)
     close(s.entrychannel)
@@ -29,16 +43,32 @@ function Base.close(s::Session)
 end
 Protocols.dispatchonmessage(s::Session, args...; kwargs...) = Protocols.dispatchonmessage(s.protocol, args...; kwargs...)
 
+"Store the sessions of a server."
 struct Smuggler{T,U}
+    "Specific to the currently used Server. Example: a [`SocketSmugglers.SocketSmuggler`](@ref)."
     vessel::T
+    "The serializer used in this server. For example: [`MsgPack`](https://github.com/JuliaIO/MsgPack.jl)."
     serializer::U
+    "All the currently open sessions."
     sessions::Set{Session}
 end
 Base.show(io::IO, s::Smuggler{T,U}) where {T,U} = print(io, "Smuggler($T, $(s.serializer))")
+"Get the vessel."
 vessel(s::Smuggler) = s.vessel
+"Get the sessions."
 sessions(s::Smuggler) = s.sessions
 Base.isopen(s::Smuggler) = isopen(vessel(s))
+"""
+Has to be implemented for each specific server. See for example `SocketSmugglers`.
+
+Should return the specific of a session used to build a [`Session`](@ref).
+"""
 function waitsession(::T) where T error("You must implement `REPLSmuggler.waitsession` for type $T")  end
+"""
+    getsession(smuggler)
+
+Return a [`Session`](@ref) through a call to [`waitsession`](@ref).
+"""
 function getsession(smuggler::Smuggler)
     s = Session(waitsession(smuggler), smuggler.serializer)
     push!(smuggler.sessions, s)
@@ -56,7 +86,6 @@ function Base.close(s::Smuggler)
     close(vessel(s))
 end
     
-# Heavily inspired by RemoteREPL.jl server.
 # Like `sprint()`, but uses IOContext properties `ctx_properties`
 #
 # This is used to stringify results before sending to the client. This is
@@ -71,6 +100,14 @@ function sprint_ctx(f, session)
     f(ctx)
     String(take!(io))
 end
+
+"""
+    evaluate_entry(session, msgid, file, line, value)
+
+Evaluate the code in `value` in the context of the given `session`, replacing the
+context of the code with `file` and `line`. If an error occurs, it will put a 
+[`Protocols.Error`](@ref) to the outgoing channel of the session.
+"""
 function evaluate_entry(session, msgid, file, line, value)
     @debug "Evaluating entry" session file line value
     value = "begin\n" * value * "\nend"
@@ -99,6 +136,12 @@ function evaluate_entry(session, msgid, file, line, value)
         put!(session.responsechannel, Protocols.Error(msgid, exc, stack))
     end
 end
+
+"""
+    evaluate_entries(session)
+
+Repeatedly evaluate the code put to the input channel of the `session`.
+"""
 function evaluate_entries(session)
     while true
         try
@@ -118,6 +161,12 @@ function evaluate_entries(session)
     end
 end
 
+"""
+Fed to [`Protocols.dispatchonmessage`](@ref) to respond accordingly to incoming
+requests.
+"""
+function treatrequest end
+
 function treatrequest(::Val{:interrupt}, session, repl_backend, msgid)
     @debug "Scheduling an interrupt." session repl_backend
     schedule(repl_backend, InterruptException(); error=true)
@@ -134,6 +183,9 @@ function treatrequest(::Val{:exit}, session, repl_backend, msgid)
     close(session)
     put!(session.responsechannel, Protocols.Result(msgid, "Done."))
 end
+"""
+Dispatch repeatedly the incoming requests of a session.
+"""
 function deserialize_requests(session::Session, repl_backend)
     while isopen(session)
         try
@@ -151,6 +203,9 @@ function deserialize_requests(session::Session, repl_backend)
         end
     end
 end
+"""
+Send repeatedly the responses of a given session.
+"""
 function serialize_responses(session)
     try
         while true
@@ -164,6 +219,11 @@ function serialize_responses(session)
         end
     end
 end
+
+"""
+Serve one session, starting three loops to evaluate the entries, serialize the
+responses and deserialize the requests.
+"""
 function serve_repl_session(session)
     put!(session.responsechannel, Protocols.Handshake())
     @sync begin
@@ -193,6 +253,10 @@ function serve_repl_session(session)
         end
     end
 end
+
+"""
+Serve sessions to clients connecting to a server.
+"""
 function serve_repl(smuggler::Smuggler)
     @async try
         while isopen(smuggler)
