@@ -1,3 +1,6 @@
+"""
+A specific kind of server for UNIX sockets / Windows pipes.
+"""
 module SocketSmugglers
 using Sockets
 

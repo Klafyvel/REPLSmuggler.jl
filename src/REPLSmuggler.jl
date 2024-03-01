@@ -28,6 +28,9 @@ include("Server.jl")
 using .Server
 
 
+"""
+Store the current server.
+"""
 CURRENT_SMUGGLER = nothing
 """
     smuggle(smuggler, args...; kwargs...)
@@ -46,6 +49,15 @@ smuggle(U) = smuggle(SocketSmuggler, U)
 include("MsgPackSerializer.jl")
 using MsgPack
 using .MsgPackSerializer
+"""
+    smuggler()
+
+Start a server using a UNIX sockets with a random name and `MsgPack.jl` as a
+serializer.
+
+The socket name is displayed in the REPL, and the server is accessible through
+[`CURRENT_SMUGGLER`](@ref).
+"""
 smuggle() = smuggle(SocketSmuggler, MsgPack)
 
 end

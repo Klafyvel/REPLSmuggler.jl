@@ -5,7 +5,7 @@ see here:
 - https://github.com/msgpack-rpc/msgpack-rpc/blob/master/spec.md
 
 The actual (de)serialization from and to MsgPack objects is handled by MsgPack.jl
-through a lightweight wrapper defined in MsgPackSerializer.jl.
+through a lightweight wrapper defined in `MsgPackSerializer`.
 
 The protocol consists of requests messages and their corresponding response messages. There can also be notification messages.
 
