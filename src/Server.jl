@@ -6,7 +6,6 @@ The handling of the communication protocol is done by [`Protocols`](@ref).
 The implementation is heavily inspired by the server from [RemoteREPL.jl](https://github.com/c42f/RemoteREPL.jl).
 """
 module Server
-using AbstractTrees
 
 using ..Protocols
 
