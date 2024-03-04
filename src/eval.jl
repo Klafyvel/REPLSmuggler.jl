@@ -37,9 +37,10 @@ function evaluate_entry(session, msgid, file, line, value)
         write(REPL.LineEdit.terminal(s), take!(io))
         flush(REPL.LineEdit.terminal(s))
 
-        expr = Meta.parse(eval_string, raise=false)
+        expr = Meta.parseall(eval_string)
         # Now we put the correct file name and line number on the parsed
         # expression.
+        @debug "expr before adjustment" expr
         for node in AbstractTrees.PostOrderDFS(expr)
             if hasproperty(node, :args)
                 new_args = map(node.args) do c
@@ -52,6 +53,7 @@ function evaluate_entry(session, msgid, file, line, value)
                 node.args = new_args
             end
         end
+        @debug "expr after adjustment" expr
 
         local repl_response
         try
