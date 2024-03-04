@@ -233,10 +233,14 @@ function serve_repl(smuggler::Smuggler)
                     @warn "Something went wrong evaluating client command" exception=exception,catch_backtrace()
                 end
             finally
+                println()
                 @info "REPL client exited" session
+                println()
                 close(smuggler, session)
             end
+            println()
             @info "New client connected" session
+            println()
         end
     catch exception
         if exception isa Base.IOError && !isopen(smuggler)

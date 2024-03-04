@@ -12,11 +12,31 @@ using Base: JuliaSyntax
 """
 function evaluate_entry(session, msgid, file, line, value)
     @debug "Evaluating entry" session file line value
+    repl = Base.active_repl
     current_line = line
     current_index = 1
+    s = repl.mistate.mode_state[repl.mistate.current_mode]
     while current_index < lastindex(value)
         node, new_index = JuliaSyntax.parsestmt(JuliaSyntax.GreenNode, value, current_index) 
         eval_string = value[current_index:new_index-1]
+
+        @debug "Printing eval string"
+        # Stolen from OhMyREPL.jl
+        io = IOBuffer()
+        outbuf = IOContext(io, stdout)
+        termbuf = REPL.Terminals.TerminalBuffer(outbuf)
+        # Hide the cursor
+        REPL.LineEdit.write(outbuf, "\e[?25l")
+        REPL.LineEdit.clear_input_area(termbuf, s)
+        REPL.LineEdit.write_prompt(termbuf, s, REPL.LineEdit.hascolor(REPL.LineEdit.terminal(s)))
+        REPL.LineEdit.write(termbuf, "\e[0m") # Reset any formatting from Julia so that we start with a clean slate
+        write(io, lstrip(eval_string, '\n'))
+        if last(eval_string) ≠ '\n'
+            write(io, "\n")
+        end
+        write(REPL.LineEdit.terminal(s), take!(io))
+        flush(REPL.LineEdit.terminal(s))
+
         expr = Meta.parse(eval_string, raise=false)
         # Now we put the correct file name and line number on the parsed
         # expression.
@@ -43,12 +63,22 @@ function evaluate_entry(session, msgid, file, line, value)
             put!(session.responsechannel, Protocols.Error(msgid, exc, stack))
         end
         @debug "Printing REPL response" repl_response
-        repl = Base.active_repl
         hide_output = REPL.ends_with_semicolon(eval_string)
         REPL.print_response(repl, repl_response, !hide_output, REPL.hascolor(repl))
 
         current_index = new_index
         current_line = current_line + countlines(IOBuffer(eval_string))
+
+        io = IOBuffer()
+        outbuf = IOContext(io, stdout)
+        termbuf = REPL.Terminals.TerminalBuffer(outbuf)
+        write(io, "\n")
+        REPL.LineEdit.clear_input_area(termbuf, s)
+        REPL.LineEdit.write_prompt(termbuf, s, REPL.LineEdit.hascolor(REPL.LineEdit.terminal(s)))
+        REPL.LineEdit.write(termbuf, "\e[0m") # Reset any formatting from Julia so that we start with a clean slate
+        REPL.LineEdit.write(outbuf, "\e[?25h")  # Show the cursor
+        write(REPL.LineEdit.terminal(s), take!(io))
+        flush(REPL.LineEdit.terminal(s))
     end
 end
 
