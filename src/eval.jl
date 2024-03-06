@@ -17,7 +17,7 @@ function evaluate_entry(session, msgid, file, line, value)
     current_index = 1
     s = repl.mistate.mode_state[repl.mistate.current_mode]
     while current_index < lastindex(value)
-        node, new_index = JuliaSyntax.parsestmt(JuliaSyntax.GreenNode, value, current_index) 
+        node, new_index = JuliaSyntax.parsestmt(JuliaSyntax.GreenNode, value, current_index, ignore_errors=true) 
         eval_string = value[current_index:new_index-1]
 
         @debug "Printing eval string"
