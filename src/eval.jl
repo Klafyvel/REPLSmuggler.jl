@@ -65,6 +65,7 @@ function evaluate_entry(session, msgid, file, line, value)
             put!(session.responsechannel, Protocols.Error(msgid, exc, stack))
         end
         @debug "Printing REPL response" repl_response
+        setglobal!(Base.MainInclude, :ans, first(repl_response))
         hide_output = REPL.ends_with_semicolon(eval_string)
         REPL.print_response(repl, repl_response, !hide_output, REPL.hascolor(repl))
 
