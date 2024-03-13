@@ -14,6 +14,9 @@ struct SocketSmuggler
     server::Base.IOServer
 end
 function SocketSmuggler(path)
+    if !Sys.iswindows()
+        mkpath(path)
+    end
     server = listen(path)
     @info "Ahoy, now smuggling from socket $path."
     SocketSmuggler(path, server)
