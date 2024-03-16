@@ -15,7 +15,7 @@ struct SocketSmuggler
 end
 function SocketSmuggler(path)
     if !Sys.iswindows()
-        mkpath(path)
+        mkpath(dirname(path))
     end
     server = listen(path)
     @info "Ahoy, now smuggling from socket $path."
