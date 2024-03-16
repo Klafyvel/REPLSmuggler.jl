@@ -12,14 +12,7 @@ const SMUGGLING_NOUNS = ["contraband", "clandestine_operation", "smuggler", "boo
 # Adjectives related to smuggling
 const SMUGGLING_ADJECTIVES = ["covert", "stealthy", "illicit", "underground", "secretive", "clandestine", "smuggled", "contraband", "sneaky", "illegitimate"]
 
-function yer_name(;joinpath=true)
-    filename = rand(SMUGGLING_ADJECTIVES) * "_" * rand(SMUGGLING_NOUNS)
-    if joinpath
-        BaseDirs.User.runtime(PROJECT, filename)
-    else
-        filename
-    end
-end
+yer_name() = rand(SMUGGLING_ADJECTIVES) * "_" * rand(SMUGGLING_NOUNS)
 
 include("Protocols.jl")
 using .Protocols
@@ -32,32 +25,62 @@ using .Server
 Store the current server.
 """
 CURRENT_SMUGGLER = nothing
-"""
-    smuggle(smuggler, args...; kwargs...)
-You can start smuggling.
-"""
-function smuggle(T, U)
+
+function smuggle(specific_smuggler, serializer)
     global CURRENT_SMUGGLER
-    CURRENT_SMUGGLER = Smuggler(T(), U, Set{Session}())
+    CURRENT_SMUGGLER = Smuggler(specific_smuggler, serializer, Set{Session}())
     serve_repl(CURRENT_SMUGGLER)
 end
 
 include("SocketSmugglers.jl")
 using .SocketSmugglers
-smuggle(U) = smuggle(SocketSmuggler, U)
 
 include("MsgPackSerializer.jl")
 using MsgPack
 using .MsgPackSerializer
+
 """
-    smuggler()
+    basepath()
+
+Return a path where REPLSmuggler can store its socket, depending on the OS.
+
+* For Linux: `/run/user/<uid>/julia/replsmuggler/`
+* For Windows: `\\\\.\\pipe\\`
+* For MacOS: `~/Library/Application Support/julia/replsmuggler/`
+
+"""
+basepath() = if Sys.isunix()
+    BaseDirs.User.runtime(REPLSmuggler.PROJECT)
+elseif Sys.iswindows()
+    replace("😭😭.😭pipe😭", "😭"=>"\\")
+else
+    error("Can't create a UNIX Socket or equivalent on your platform.")
+end
+
+"""
+    smuggle([name]; basepath=basepath(), serializer=MsgPack)
 
 Start a server using a UNIX sockets with a random name and `MsgPack.jl` as a
-serializer.
+serializer. The socket will be stored in `joinpath(basepath, name)`. If `name`
+is not provided, REPLSmuggler will try randomly generated names until a 
+non-already-existing socket name is found.
+
+For example, on linux, you could find the socket in `/run/user/1000/julia/replsmuggler/clandestine_underworld`
+if the name was chosen to be `clandestine_underworld`.
 
 The socket name is displayed in the REPL, and the server is accessible through
 [`CURRENT_SMUGGLER`](@ref).
+
+See also [basepath](@ref).
 """
-smuggle() = smuggle(SocketSmuggler, MsgPack)
+smuggle(name::AbstractString; basepath=basepath(), serializer=MsgPack) = smuggle(SocketSmuggler(joinpath(basepath, name)), serializer)
+function smuggle(; basepath=basepath(), serializer=MsgPack)
+    name = yer_name()
+    while ispath(joinpath(basepath, name))
+        name = yer_name()
+    end
+    smuggle(SocketSmuggler(joinpath(basepath, name)), serializer)
+end
+
 
 end

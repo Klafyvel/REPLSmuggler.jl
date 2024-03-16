@@ -14,26 +14,12 @@ struct SocketSmuggler
     server::Base.IOServer
 end
 function SocketSmuggler(path)
+    if !Sys.iswindows()
+        mkpath(dirname(path))
+    end
     server = listen(path)
     @info "Ahoy, now smuggling from socket $path."
     SocketSmuggler(path, server)
-end
-function SocketSmuggler()
-    path = ""
-    if Sys.isunix()
-        path = REPLSmuggler.yer_name()
-        while ispath(path)
-            path = REPLSmuggler.yer_name()
-        end
-        mkpath(dirname(path))
-        path
-    elseif Sys.iswindows()
-        path = REPLSmuggler.yer_name(joinpath=false)
-        path = replace("😭😭.😭pipe😭$path", "😭"=>"\\")
-    else
-        error("Can't create a UNIX Socket or equivalent on your platform.")
-    end
-    SocketSmuggler(path)
 end
 Base.isopen(s::SocketSmuggler) = isopen(s.server)
 Base.close(s::SocketSmuggler) = close(s.server)
