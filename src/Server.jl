@@ -7,6 +7,8 @@ The implementation is heavily inspired by the server from [RemoteREPL.jl](https:
 """
 module Server
 
+using REPL
+
 using ..Protocols
 
 export Session, Smuggler, serve_repl
@@ -29,8 +31,10 @@ struct Session{T}
     smugglerspecific::T
     "The specific [`Protocols.Protocol`](@ref) used in this session."
     protocol::Protocols.Protocol
+    "REPL history to write to."
+    history::REPL.REPLHistoryProvider
 end
-Session(specific, serializer) = Session(Channel(1), Channel(1), Dict(), Main, specific, Protocols.Protocol(serializer, io(specific)))
+Session(specific, serializer, history) = Session(Channel(1), Channel(1), Dict(), Main, specific, Protocols.Protocol(serializer, io(specific)), history)
 function Base.show(io::IO, ::Session{T}) where T
     print(io, "Session{$T}()")
 end
@@ -50,6 +54,8 @@ struct Smuggler{T,U}
     serializer::U
     "All the currently open sessions."
     sessions::Set{Session}
+    "REPL history for sessions to write to."
+    history::REPL.REPLHistoryProvider
 end
 Base.show(io::IO, s::Smuggler{T,U}) where {T,U} = print(io, "Smuggler($T, $(s.serializer))")
 "Get the vessel."
@@ -69,7 +75,7 @@ function waitsession(::T) where T error("You must implement `REPLSmuggler.waitse
 Return a [`Session`](@ref) through a call to [`waitsession`](@ref).
 """
 function getsession(smuggler::Smuggler)
-    s = Session(waitsession(smuggler), smuggler.serializer)
+    s = Session(waitsession(smuggler), smuggler.serializer, smuggler.history)
     push!(smuggler.sessions, s)
     s
 end

@@ -32,6 +32,12 @@ Task (runnable) @0x0000753a784c6bd0
 Modules = [REPLSmuggler]
 ```
 
+### History
+
+```@autodocs
+Modules = [REPLSmuggler.History]
+```
+
 ### Protocol
 
 ```@autodocs
