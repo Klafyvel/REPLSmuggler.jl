@@ -2,6 +2,8 @@ import REPL
 import JuliaSyntax
 import AbstractTrees
 
+using ..History
+
 """
     evaluate_entry(session, msgid, file, line, value)
 
@@ -64,6 +66,9 @@ function evaluate_entry(session, msgid, file, line, value)
             stack = stacktrace(Base.catch_backtrace())
             put!(session.responsechannel, Protocols.Error(msgid, exc, stack))
         end
+        @debug "Addind expression to history"
+        History.add_history(session, eval_string)
+        REPL.history_reset_state(session.history)
         @debug "Printing REPL response" repl_response
         setglobal!(Base.MainInclude, :ans, first(repl_response))
         hide_output = REPL.ends_with_semicolon(eval_string)
