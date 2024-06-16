@@ -66,6 +66,16 @@ Currently, the following notifications can be sent by the server. If a notificat
     could be replaced if other implementations of the protocol were to exist.
   - `version::String`: A [sementic versioning](https://semver.org/) version number
     telling the client which version of the protocol is being used by the server.
+- `diagnostic`: Sent following the evaluation of some code by the user from the 
+   REPL. For example, this could be used via a direct call to display a diagnostic
+   on a specific line, or to report an exception from some code evaluated by the 
+   user, or report diagnostic from other packages such as `JET.jl`. This is very
+   similar to how an exception would be handled when executing code.
+   Parameters:
+   - `title::String`: Short title for the diagnostic.
+   - `diagnostic::String`: The diagnostic that is to be displayed.
+   - `stacktrace::Vector{Tuple{String, UInt32, String}}`: The stacktrace, with
+   each row being `(file, line, function)`.
 
 ## Typical session:
 
@@ -86,7 +96,7 @@ module Protocols
 "Name of the protocol implementation."
 const PROTOCOL_MAGIC = "REPLSmuggler"
 "Protocol version."
-const PROTOCOL_VERSION = v"0.1"
+const PROTOCOL_VERSION = v"0.2"
 
 "MsgPackRPC message types."
 const MsgType = UInt8
@@ -223,6 +233,18 @@ function deserialize end
 Create a hand-shake notification.
 """
 Handshake() = Notification("handshake", [PROTOCOL_MAGIC, string(PROTOCOL_VERSION)])
+
+"""
+    Diagnostic(title, diagnostic, stackframe)
+
+See protocol's definition and build `stackframe` accordingly.
+"""
+function Diagnostic(title, diagnostic, stackframe)
+    Notification(
+        "diagnostic",
+        [title, diagnostic, stackframe],
+    )
+end
 
 """
     Error(msgid, error, stackframe)

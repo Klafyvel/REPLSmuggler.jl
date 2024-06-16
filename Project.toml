@@ -11,6 +11,12 @@ MsgPack = "99f44e22-a591-53d1-9472-aa23ef4bd671"
 REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"
 
+[weakdeps]
+JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
+
+[extensions]
+JETExt = "JET"
+
 [compat]
 AbstractTrees = "0.4"
 Aqua = "0.8"
@@ -21,6 +27,7 @@ REPL = "1"
 Sockets = "1"
 Test = "1"
 julia = "1.8"
+JET = "0.9"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"

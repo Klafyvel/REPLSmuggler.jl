@@ -85,5 +85,55 @@ function smuggle(; basepath=basepath(), serializer=MsgPack)
     smuggle(SocketSmuggler(joinpath(basepath, name)), serializer)
 end
 
+"""
+    smuggle(title, diagnostic, filename, line, function)
+
+Smuggle a diagnostic in file `filename`, function `function`, at line `line`.
+
+!!! warning
+
+    The notification will be sent to all connected sessions.
+"""
+function smuggle(title, diagnostic, filename, line, func)
+  if isnothing(CURRENT_SMUGGLER)
+    error("No smuggling route. First call `smuggle()` and connect with your editor to open one.")
+  end
+  for session in Server.sessions(CURRENT_SMUGGLER)
+    put!(session.responsechannel, 
+         Protocols.Diagnostic(title, diagnostic, [(filename, line, func)]))
+  end
+end
+
+"""
+    smuggle(exception, stackframes=stacktrace(Base.catch_stacktrace()))
+
+Smuggle an exception. Can be used to report on exceptions thrown by code evaluated
+by the user in the REPL.
+
+!!! warning
+
+    The notification will be sent to all connected sessions.
+
+# Examples
+```julia
+try
+    error("foo")
+catch exc
+    smuggle(exc)
+end
+```
+"""
+function smuggle(exc::T, stackframes=stacktrace(Base.catch_backtrace())) where {T<:Exception}
+  if isnothing(CURRENT_SMUGGLER)
+    error("No smuggling route. First call `smuggle()` and connect with your editor to open one.")
+  end
+  frames = [
+    (frame.file, frame.line, frame.func)
+    for frame in stackframes
+  ]
+  for session in Server.sessions(CURRENT_SMUGGLER)
+    put!(session.responsechannel, Protocols.Diagnostic(string(T), string(exc), frames))
+  end
+end
 
 end
