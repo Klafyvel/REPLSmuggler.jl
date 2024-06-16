@@ -24,6 +24,48 @@ julia> smuggle()
 Task (runnable) @0x0000753a784c6bd0
 ```
 
+You are then able to send code and get notified when an error happens.
+
+`smuggle` can also be used the other way around, to directly send diagnostics
+to your editor. For example, if your editor has smuggled the following function:
+```julia
+function bad_bad_bad()
+  error("hey!")
+end
+```
+You can send back diagnostics to the editor directly from the REPL by catching 
+an exception.
+```julia-repl
+julia> try
+       bad_bad_bad()
+catch exc
+       smuggle(exc)
+end
+```
+
+You can even send directly diagnostics, without looking for code that has actually
+been sent by the editor:
+```julia-repl
+julia> smuggle("hey", "foo", "$(pwd())/test.jl", 11, "none")
+```
+
+There's also an extension to work with [JET](https://github.com/aviatesk/JET.jl)'s 
+reports. Say you smuggled the following functions:
+```julia
+function foo(s0)
+  a = []
+  for s in split(s0)
+    push!(a, bar(s))
+  end
+  return sum(a)
+end
+bar(s::String) = parse(Int, s)
+```
+You can smuggle back to the editor JET's report as follow:
+```julia-repl
+julia> smuggle(@report_call foo("1 2 3"))
+```
+
 ## Internals
 
 ### REPLSmuggler
