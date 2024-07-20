@@ -106,7 +106,7 @@ const NOTIFICATION = 0x02
 
 "Used internally to report protocol exceptions."
 struct ProtocolException <: Exception
-    msgid::Union{UInt32,Nothing}
+    msgid::Union{UInt32, Nothing}
     msg::String
 end
 ProtocolException(s::AbstractString) = ProtocolException(nothing, s)
@@ -158,7 +158,7 @@ astuple(r::Request) = (
     REQUEST,
     r.msgid,
     r.method,
-    r.params
+    r.params,
 )
 
 "Represents a response."
@@ -175,9 +175,9 @@ astuple(e::ErrorResponse) = (
     (
         e.exception,
         e.exception_text,
-        e.stacktrace
+        e.stacktrace,
     ),
-    nothing
+    nothing,
 )
 struct ResultResponse <: AbstractResponse
     msgid::UInt32
@@ -187,7 +187,7 @@ astuple(r::ResultResponse) = (
     RESPONSE,
     r.msgid,
     nothing,
-    r.result
+    r.result,
 )
 
 "Represents a notification."
@@ -204,7 +204,7 @@ end
 astuple(notification::Notification) = (
     NOTIFICATION,
     notification.method,
-    notification.params
+    notification.params,
 )
 
 struct Protocol{T}
@@ -251,8 +251,8 @@ end
 """
 function Error(msgid, error::T, stackframe) where {T}
     frames = [
-        (frame.file, frame.line, frame.func)
-        for frame in stackframe
+    (frame.file, frame.line, frame.func)
+    for frame in stackframe
     ]
     ErrorResponse(
         msgid,

@@ -23,7 +23,7 @@ MsgPack.from_msgpack(::Type{Protocols.MsgType}, msg::Integer) = Protocols.MsgTyp
 
 MsgPack.msgpack_type(::Type{T}) where {T <: Protocols.AbstractMsgPackRPC} = MsgPack.ArrayType()
 MsgPack.to_msgpack(::MsgPack.ArrayType, msg::Protocols.AbstractMsgPackRPC) = Protocols.astuple(msg)
-MsgPack.from_msgpack(::Type{T}, array::AbstractArray) where {T <: Protocols.AbstractMsgPackRPC}  = T(array)
+MsgPack.from_msgpack(::Type{T}, array::AbstractArray) where {T <: Protocols.AbstractMsgPackRPC} = T(array)
 
-    
+
 end

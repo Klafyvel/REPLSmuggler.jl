@@ -31,42 +31,52 @@ using REPLSmuggler.Protocols
     Protocols.serialize(protocol, Protocols.Handshake())
     @test isready(chan)
     response = take!(chan)
-    @test test_response(response, (
-        Protocols.NOTIFICATION,
-        "handshake",
-        [Protocols.PROTOCOL_MAGIC, string(Protocols.PROTOCOL_VERSION)]
-    ))
+    @test test_response(
+        response, (
+            Protocols.NOTIFICATION,
+            "handshake",
+            [Protocols.PROTOCOL_MAGIC, string(Protocols.PROTOCOL_VERSION)],
+        ),
+    )
 
     # Error
-    Protocols.serialize(protocol, Protocols.Error(
-        1, ErrorException("Foo"), [
-            (file="foo.jl", line=1, func="foo()"),
-            (file="bar.jl", line=2, func="bar()"),
-        ]
-    ))
+    Protocols.serialize(
+        protocol, Protocols.Error(
+            1, ErrorException("Foo"), [
+                (file = "foo.jl", line = 1, func = "foo()"),
+                (file = "bar.jl", line = 2, func = "bar()"),
+            ],
+        ),
+    )
     @test isready(chan)
     response = take!(chan)
-    @test test_response(response, (
-        Protocols.RESPONSE,
-        1,
-        ("ErrorException", string(ErrorException("Foo")),
-            [
-                ("foo.jl", 1, "foo()"),
-                ("bar.jl", 2, "bar()"),
-            ]),
-        nothing
-    ))
+    @test test_response(
+        response, (
+            Protocols.RESPONSE,
+            1,
+            (
+                "ErrorException", string(ErrorException("Foo")),
+                [
+                    ("foo.jl", 1, "foo()"),
+                    ("bar.jl", 2, "bar()"),
+                ],
+            ),
+            nothing,
+        ),
+    )
 
     # Result
     Protocols.serialize(protocol, Protocols.Result(1, "foo"))
     @test isready(chan)
     response = take!(chan)
-    @test test_response(response, (
-        Protocols.RESPONSE,
-        UInt32(1),
-        nothing,
-        "foo"
-    ))
+    @test test_response(
+        response, (
+            Protocols.RESPONSE,
+            UInt32(1),
+            nothing,
+            "foo",
+        ),
+    )
 
     # Deserialize
     function Protocols.deserialize(protocol::Protocols.Protocol{TestSerializer})

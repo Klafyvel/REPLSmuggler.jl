@@ -24,7 +24,7 @@ end
 Base.isopen(s::SocketSmuggler) = isopen(s.server)
 Base.close(s::SocketSmuggler) = close(s.server)
 
-function REPLSmuggler.Server.waitsession(s::Server.Smuggler{SocketSmuggler, U}) where U
+function REPLSmuggler.Server.waitsession(s::Server.Smuggler{SocketSmuggler, U}) where {U}
     socketsmuggler = REPLSmuggler.Server.vessel(s)
     accept(socketsmuggler.server)
 end

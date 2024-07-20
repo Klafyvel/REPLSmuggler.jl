@@ -55,7 +55,7 @@ Return a path where REPLSmuggler can store its socket, depending on the OS.
 basepath() = if Sys.isunix()
     BaseDirs.User.runtime(REPLSmuggler.PROJECT)
 elseif Sys.iswindows()
-    replace("😭😭.😭pipe😭", "😭"=>"\\")
+    replace("😭😭.😭pipe😭", "😭" => "\\")
 else
     error("Can't create a UNIX Socket or equivalent on your platform.")
 end
@@ -76,8 +76,8 @@ The socket name is displayed in the REPL, and the server is accessible through
 
 See also [basepath](@ref).
 """
-smuggle(name::AbstractString; basepath=basepath(), serializer=MsgPack) = smuggle(SocketSmuggler(joinpath(basepath, name)), serializer)
-function smuggle(; basepath=basepath(), serializer=MsgPack)
+smuggle(name::AbstractString; basepath = basepath(), serializer = MsgPack) = smuggle(SocketSmuggler(joinpath(basepath, name)), serializer)
+function smuggle(; basepath = basepath(), serializer = MsgPack)
     name = yer_name()
     while ispath(joinpath(basepath, name))
         name = yer_name()
@@ -95,13 +95,15 @@ Smuggle a diagnostic in file `filename`, function `function`, at line `line`.
     The notification will be sent to all connected sessions.
 """
 function smuggle(title, diagnostic, filename, line, func)
-  if isnothing(CURRENT_SMUGGLER)
-    error("No smuggling route. First call `smuggle()` and connect with your editor to open one.")
-  end
-  for session in Server.sessions(CURRENT_SMUGGLER)
-    put!(session.responsechannel, 
-         Protocols.Diagnostic(title, diagnostic, [(filename, line, func)]))
-  end
+    if isnothing(CURRENT_SMUGGLER)
+        error("No smuggling route. First call `smuggle()` and connect with your editor to open one.")
+    end
+    for session in Server.sessions(CURRENT_SMUGGLER)
+        put!(
+            session.responsechannel,
+            Protocols.Diagnostic(title, diagnostic, [(filename, line, func)]),
+        )
+    end
 end
 
 """
@@ -123,17 +125,17 @@ catch exc
 end
 ```
 """
-function smuggle(exc::T, stackframes=stacktrace(Base.catch_backtrace())) where {T<:Exception}
-  if isnothing(CURRENT_SMUGGLER)
-    error("No smuggling route. First call `smuggle()` and connect with your editor to open one.")
-  end
-  frames = [
+function smuggle(exc::T, stackframes = stacktrace(Base.catch_backtrace())) where {T <: Exception}
+    if isnothing(CURRENT_SMUGGLER)
+        error("No smuggling route. First call `smuggle()` and connect with your editor to open one.")
+    end
+    frames = [
     (frame.file, frame.line, frame.func)
     for frame in stackframes
-  ]
-  for session in Server.sessions(CURRENT_SMUGGLER)
-    put!(session.responsechannel, Protocols.Diagnostic(string(T), string(exc), frames))
-  end
+    ]
+    for session in Server.sessions(CURRENT_SMUGGLER)
+        put!(session.responsechannel, Protocols.Diagnostic(string(T), string(exc), frames))
+    end
 end
 
 end

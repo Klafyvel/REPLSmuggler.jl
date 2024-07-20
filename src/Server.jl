@@ -35,7 +35,7 @@ struct Session{T}
     history::REPL.REPLHistoryProvider
 end
 Session(specific, serializer, history) = Session(Channel(1), Channel(1), Dict(), Main, specific, Protocols.Protocol(serializer, io(specific)), history)
-function Base.show(io::IO, ::Session{T}) where T
+function Base.show(io::IO, ::Session{T}) where {T}
     print(io, "Session{$T}()")
 end
 Base.isopen(s::Session) = isopen(s.smugglerspecific)
@@ -47,7 +47,7 @@ end
 Protocols.dispatchonmessage(s::Session, args...; kwargs...) = Protocols.dispatchonmessage(s.protocol, args...; kwargs...)
 
 "Store the sessions of a server."
-struct Smuggler{T,U}
+struct Smuggler{T, U}
     "Specific to the currently used Server. Example: a [`SocketSmugglers.SocketSmuggler`](@ref)."
     vessel::T
     "The serializer used in this server. For example: [`MsgPack`](https://github.com/JuliaIO/MsgPack.jl)."
@@ -57,7 +57,7 @@ struct Smuggler{T,U}
     "REPL history for sessions to write to."
     history::REPL.REPLHistoryProvider
 end
-Base.show(io::IO, s::Smuggler{T,U}) where {T,U} = print(io, "Smuggler($T, $(s.serializer))")
+Base.show(io::IO, s::Smuggler{T, U}) where {T, U} = print(io, "Smuggler($T, $(s.serializer))")
 "Get the vessel."
 vessel(s::Smuggler) = s.vessel
 "Get the sessions."
@@ -68,7 +68,7 @@ Has to be implemented for each specific server. See for example `SocketSmugglers
 
 Should return the specific of a session used to build a [`Session`](@ref).
 """
-function waitsession(::T) where T error("You must implement `REPLSmuggler.waitsession` for type $T")  end
+function waitsession(::T) where {T} error("You must implement `REPLSmuggler.waitsession` for type $T")  end
 """
     getsession(smuggler)
 
@@ -83,14 +83,14 @@ function Base.close(smuggler::Smuggler, session::Session)
     close(session)
     pop!(smuggler.sessions, session)
 end
-function Base.close(s::Smuggler) 
+function Base.close(s::Smuggler)
     for session in sessions(s)
         close(session)
     end
     empty!(sessions(s))
     close(vessel(s))
 end
-    
+
 # Like `sprint()`, but uses IOContext properties `ctx_properties`
 #
 # This is used to stringify results before sending to the client. This is
@@ -101,7 +101,7 @@ end
 #     are truncated when the :limit IOContext property is set)
 function sprint_ctx(f, session)
     io = IOBuffer()
-    ctx = IOContext(io, :module=>session.evaluatein)
+    ctx = IOContext(io, :module => session.evaluatein)
     f(ctx)
     String(take!(io))
 end
@@ -116,7 +116,7 @@ Repeatedly evaluate the code put to the input channel of the `session`.
 function evaluate_entries(session)
     while true
         try
-            msgid,file,line,value = take!(session.entrychannel)
+            msgid, file, line, value = take!(session.entrychannel)
             evaluate_entry(session, msgid, file, line, value)
         catch exc
             if exc isa InvalidStateException && !isopen(session.entrychannel)
@@ -140,16 +140,16 @@ function treatrequest end
 
 function treatrequest(::Val{:interrupt}, session, repl_backend, msgid)
     @debug "Scheduling an interrupt." session repl_backend
-    schedule(repl_backend, InterruptException(); error=true)
+    schedule(repl_backend, InterruptException(); error = true)
     put!(session.responsechannel, Protocols.Result(msgid, "Done."))
 end
 function treatrequest(::Val{:eval}, session, repl_backend, msgid, file, line, code)
     @debug "Adding an entry." msgid file line session repl_backend
-    put!(session.entrychannel, (msgid, file, line, code))    
+    put!(session.entrychannel, (msgid, file, line, code))
 end
 function treatrequest(::Val{:exit}, session, repl_backend, msgid)
     @debug "Scheduling an interrupt." session repl_backend
-    schedule(repl_backend, InterruptException(); error=true)
+    schedule(repl_backend, InterruptException(); error = true)
     @debug "Exiting" session repl_backend
     close(session)
     put!(session.responsechannel, Protocols.Result(msgid, "Done."))
@@ -201,7 +201,7 @@ function serve_repl_session(session)
         repl_backend = @async try
             evaluate_entries(session)
         catch exc
-            @error "RemoteREPL backend crashed" exception=exc,catch_backtrace()
+            @error "RemoteREPL backend crashed" exception = exc, catch_backtrace()
         finally
             close(session)
         end
@@ -209,7 +209,7 @@ function serve_repl_session(session)
         @async try
             serialize_responses(session)
         catch exc
-            @error "RemoteREPL responder crashed" exception=exc,catch_backtrace()
+            @error "RemoteREPL responder crashed" exception = exc, catch_backtrace()
         finally
             close(session)
         end
@@ -217,7 +217,7 @@ function serve_repl_session(session)
         try
             deserialize_requests(session, repl_backend)
         catch exc
-            @error "RemoteREPL frontend crashed" exception=exc,catch_backtrace()
+            @error "RemoteREPL frontend crashed" exception = exc, catch_backtrace()
             rethrow()
         finally
             close(session)
@@ -236,7 +236,7 @@ function serve_repl(smuggler::Smuggler)
                 serve_repl_session(session)
             catch exception
                 if !(exception isa EOFError && !isopen(session))
-                    @warn "Something went wrong evaluating client command" exception=exception,catch_backtrace()
+                    @warn "Something went wrong evaluating client command" exception = exception, catch_backtrace()
                 end
             finally
                 println()
@@ -253,7 +253,7 @@ function serve_repl(smuggler::Smuggler)
             # Ok - server was closed
             return
         end
-        @error "Unexpected server failure" smuggler exception=exception,catch_backtrace()
+        @error "Unexpected server failure" smuggler exception = exception, catch_backtrace()
         rethrow()
     finally
         close(smuggler)
