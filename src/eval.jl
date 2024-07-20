@@ -19,10 +19,10 @@ function evaluate_entry(session, msgid, file, line, value)
     current_index = 1
     s = repl.mistate.mode_state[repl.mistate.current_mode]
     while current_index < lastindex(value)
-        node, new_index = JuliaSyntax.parsestmt(JuliaSyntax.GreenNode, value, current_index, ignore_errors=true) 
+        node, new_index = JuliaSyntax.parsestmt(JuliaSyntax.GreenNode, value, current_index, ignore_errors=true, ignore_trivia=false) 
         eval_string = value[current_index:prevind(value, new_index)]
 
-        @debug "Printing eval string"
+        @debug "Printing eval string" eval_string
         # Stolen from OhMyREPL.jl
         io = IOBuffer()
         outbuf = IOContext(io, stdout)
@@ -75,7 +75,9 @@ function evaluate_entry(session, msgid, file, line, value)
         REPL.print_response(repl, repl_response, !hide_output, REPL.hascolor(repl))
 
         current_index = new_index
-        current_line = current_line + countlines(IOBuffer(eval_string))
+        number_of_lines_evaluated = count('\n', eval_string)
+        @debug "Here's what I did." number_of_lines_evaluated
+        current_line = current_line + number_of_lines_evaluated
 
         io = IOBuffer()
         outbuf = IOContext(io, stdout)
