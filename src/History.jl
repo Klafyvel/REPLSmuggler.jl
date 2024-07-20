@@ -8,9 +8,9 @@ using REPL
 Return the currently in-use `REPL.REPLHistoryProvider`.
 """
 function get_history_provider()
-  repl = Base.active_repl
-  state = REPL.LineEdit.state(repl.mistate)
-  REPL.LineEdit.mode(state).hist
+    repl = Base.active_repl
+    state = REPL.LineEdit.state(repl.mistate)
+    REPL.LineEdit.mode(state).hist
 end
 """
 Directly stolen and slightly modified from `REPL.add_history`.

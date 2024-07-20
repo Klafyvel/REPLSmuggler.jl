@@ -19,7 +19,7 @@ function evaluate_entry(session, msgid, file, line, value)
     current_index = 1
     s = repl.mistate.mode_state[repl.mistate.current_mode]
     while current_index < lastindex(value)
-        node, new_index = JuliaSyntax.parsestmt(JuliaSyntax.GreenNode, value, current_index, ignore_errors=true, ignore_trivia=false) 
+        node, new_index = JuliaSyntax.parsestmt(JuliaSyntax.GreenNode, value, current_index, ignore_errors = true, ignore_trivia = false)
         eval_string = value[current_index:prevind(value, new_index)]
 
         @debug "Printing eval string" eval_string
@@ -47,7 +47,7 @@ function evaluate_entry(session, msgid, file, line, value)
             if hasproperty(node, :args)
                 new_args = map(node.args) do c
                     if c isa LineNumberNode
-                        LineNumberNode(current_line+c.line-1, file)
+                        LineNumberNode(current_line + c.line - 1, file)
                     else
                         c
                     end
@@ -91,4 +91,3 @@ function evaluate_entry(session, msgid, file, line, value)
         flush(REPL.LineEdit.terminal(s))
     end
 end
-
