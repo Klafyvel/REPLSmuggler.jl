@@ -20,7 +20,7 @@ function evaluate_entry(session, msgid, file, line, value)
     s = repl.mistate.mode_state[repl.mistate.current_mode]
     while current_index < lastindex(value)
         node, new_index = JuliaSyntax.parsestmt(JuliaSyntax.GreenNode, value, current_index, ignore_errors=true) 
-        eval_string = value[current_index:new_index-1]
+        eval_string = value[current_index:prevind(value, new_index)]
 
         @debug "Printing eval string"
         # Stolen from OhMyREPL.jl
