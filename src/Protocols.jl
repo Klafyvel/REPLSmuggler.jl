@@ -251,8 +251,8 @@ end
 """
 function Error(msgid, error::T, stackframe) where {T}
     frames = [
-    (frame.file, frame.line, frame.func)
-    for frame in stackframe
+        (frame.file, frame.line, frame.func)
+        for frame in stackframe
     ]
     ErrorResponse(
         msgid,
