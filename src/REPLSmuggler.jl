@@ -17,9 +17,6 @@ yer_name() = rand(SMUGGLING_ADJECTIVES) * "_" * rand(SMUGGLING_NOUNS)
 include("Protocols.jl")
 using .Protocols
 
-include("History.jl")
-using .History
-
 include("Server.jl")
 using .Server
 
@@ -31,7 +28,7 @@ CURRENT_SMUGGLER = nothing
 
 function smuggle(specific_smuggler, serializer)
     global CURRENT_SMUGGLER
-    CURRENT_SMUGGLER = Smuggler(specific_smuggler, serializer, Set{Session}(), History.get_history_provider())
+    CURRENT_SMUGGLER = Smuggler(specific_smuggler, serializer, Set{Session}())
     serve_repl(CURRENT_SMUGGLER)
 end
 

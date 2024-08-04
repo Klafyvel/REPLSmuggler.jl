@@ -74,12 +74,6 @@ julia> smuggle(@report_call foo("1 2 3"))
 Modules = [REPLSmuggler]
 ```
 
-### History
-
-```@autodocs
-Modules = [REPLSmuggler.History]
-```
-
 ### Protocol
 
 ```@autodocs
