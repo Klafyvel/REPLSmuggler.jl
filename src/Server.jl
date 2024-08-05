@@ -23,7 +23,7 @@ struct Session{T}
     entrychannel::Channel
     "Where the outgoing requests are buffered."
     responsechannel::Channel
-    "A session might store additional parameters here."
+    "A session might store additional parameters here. Currently the only one supported is `evalbyblocks`."
     sessionparams::Dict
     "The module where the code should be evaluated (currently: Main)"
     evaluatein::Module
@@ -31,10 +31,8 @@ struct Session{T}
     smugglerspecific::T
     "The specific [`Protocols.Protocol`](@ref) used in this session."
     protocol::Protocols.Protocol
-    "Flag to tell a session to evaluate entries by block rather than by toplevel statements."
-    evalbyblocks::Bool
 end
-Session(specific, serializer) = Session(Channel(1), Channel(1), Dict(), Main, specific, Protocols.Protocol(serializer, io(specific)), false)
+Session(specific, serializer) = Session(Channel(1), Channel(1), Dict("evalbyblocks" => false), Main, specific, Protocols.Protocol(serializer, io(specific)))
 function Base.show(io::IO, ::Session{T}) where {T}
     print(io, "Session{$T}()")
 end
@@ -151,6 +149,12 @@ function treatrequest(::Val{:exit}, session, repl_backend, msgid)
     @debug "Exiting" session repl_backend
     close(session)
     put!(session.responsechannel, Protocols.Result(msgid, "Done."))
+end
+function treatrequest(::Val{:configure}, session, repl_backend, msgid, settings)
+    @debug "Configuring" session repl_backend settings
+    if haskey(settings, "evalbyblocks")
+        session.sessionparams["evalbyblocks"] = settings["evalbyblocks"]
+    end
 end
 """
 Dispatch repeatedly the incoming requests of a session.
