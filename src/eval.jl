@@ -59,6 +59,7 @@ function evaluate_entry(session, msgid, file, line, value)
         end
         @debug "Printing REPL response" repl_response
         setglobal!(Base.MainInclude, :ans, first(repl_response))
+        REPL.history_reset_state(repl.mistate.current_mode.hist)
         hide_output = REPL.ends_with_semicolon(eval_string)
         REPL.print_response(repl, repl_response, !hide_output, REPL.hascolor(repl))
         REPL.LineEdit.reset_state(s)
