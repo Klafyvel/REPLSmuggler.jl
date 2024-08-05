@@ -31,8 +31,10 @@ struct Session{T}
     smugglerspecific::T
     "The specific [`Protocols.Protocol`](@ref) used in this session."
     protocol::Protocols.Protocol
+    "Flag to tell a session to evaluate entries by block rather than by toplevel statements."
+    evalbyblocks::Bool
 end
-Session(specific, serializer) = Session(Channel(1), Channel(1), Dict(), Main, specific, Protocols.Protocol(serializer, io(specific)))
+Session(specific, serializer) = Session(Channel(1), Channel(1), Dict(), Main, specific, Protocols.Protocol(serializer, io(specific)), false)
 function Base.show(io::IO, ::Session{T}) where {T}
     print(io, "Session{$T}()")
 end
