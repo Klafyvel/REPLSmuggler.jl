@@ -40,7 +40,7 @@ function evaluate_entry(session, msgid, file, line, value)
         REPL.transition(repl.mistate, :reset)
     end
     s = repl.mistate.mode_state[repl.mistate.current_mode]
-    if session.evalbyblocks
+    if session.sessionparams["evalbyblocks"]
         iterator = [value]
     else
         iterator = StatementsIterator(value)
@@ -65,6 +65,7 @@ function evaluate_entry(session, msgid, file, line, value)
         @debug "Printing REPL response" repl_response
         hide_output = REPL.ends_with_semicolon(eval_string)
         REPL.print_response(repl, repl_response, !hide_output, REPL.hascolor(repl))
+        println(REPL.terminal(repl))
         REPL.LineEdit.reset_state(s)
         REPL.LineEdit.refresh_line(s)
 
