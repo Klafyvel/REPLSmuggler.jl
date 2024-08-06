@@ -152,6 +152,9 @@ function treatrequest(::Val{:exit}, session, repl_backend, msgid)
 end
 function treatrequest(::Val{:configure}, session, repl_backend, msgid, settings)
     @debug "Configuring" session repl_backend settings
+    if isempty(settings)
+        return
+    end
     if haskey(settings, "evalbyblocks")
         session.sessionparams["evalbyblocks"] = settings["evalbyblocks"]
     end
