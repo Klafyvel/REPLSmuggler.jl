@@ -55,7 +55,7 @@ using REPLSmuggler.Protocols
             Protocols.RESPONSE,
             1,
             (
-                "ErrorException", string(ErrorException("Foo")),
+                "ErrorException", "ErrorException: Foo",
                 [
                     ("foo.jl", 1, "foo()"),
                     ("bar.jl", 2, "bar()"),
