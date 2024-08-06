@@ -39,6 +39,13 @@ server, it will raise an error.
   - `file::String`
   - `line::UInt32`
   - `code::String`
+- `configure`: Configure the current session.
+  Parameters:
+  - `settings::Dict{String, Any}`
+  Settings do not have to be given in the request if you are not changing them. 
+  Currently, the following settings are supported:
+    - `evalbyblocks::Bool` should the session evaluate entries by block rather than
+  by toplevel statements?
 - `interrupt`: Interrupt the current evaluation.
   No parameter.
 - `exit`: Stop the current session.
@@ -96,7 +103,7 @@ module Protocols
 "Name of the protocol implementation."
 const PROTOCOL_MAGIC = "REPLSmuggler"
 "Protocol version."
-const PROTOCOL_VERSION = v"0.2"
+const PROTOCOL_VERSION = v"0.3"
 
 "MsgPackRPC message types."
 const MsgType = UInt8
@@ -124,6 +131,8 @@ function astuple end
 
 function isvalidrequest(method, params)
     if method == "eval" && length(params) == 3
+        return true
+    elseif method == "configure" && length(params) == 1
         return true
     elseif method ∈ ("interrupt", "exit") && length(params) == 0
         return true

@@ -23,7 +23,7 @@ struct Session{T}
     entrychannel::Channel
     "Where the outgoing requests are buffered."
     responsechannel::Channel
-    "A session might store additional parameters here."
+    "A session might store additional parameters here. Currently the only one supported is `evalbyblocks`."
     sessionparams::Dict
     "The module where the code should be evaluated (currently: Main)"
     evaluatein::Module
@@ -31,10 +31,8 @@ struct Session{T}
     smugglerspecific::T
     "The specific [`Protocols.Protocol`](@ref) used in this session."
     protocol::Protocols.Protocol
-    "REPL history to write to."
-    history::REPL.REPLHistoryProvider
 end
-Session(specific, serializer, history) = Session(Channel(1), Channel(1), Dict(), Main, specific, Protocols.Protocol(serializer, io(specific)), history)
+Session(specific, serializer) = Session(Channel(1), Channel(1), Dict("evalbyblocks" => false), Main, specific, Protocols.Protocol(serializer, io(specific)))
 function Base.show(io::IO, ::Session{T}) where {T}
     print(io, "Session{$T}()")
 end
@@ -54,8 +52,6 @@ struct Smuggler{T, U}
     serializer::U
     "All the currently open sessions."
     sessions::Set{Session}
-    "REPL history for sessions to write to."
-    history::REPL.REPLHistoryProvider
 end
 Base.show(io::IO, s::Smuggler{T, U}) where {T, U} = print(io, "Smuggler($T, $(s.serializer))")
 "Get the vessel."
@@ -75,7 +71,7 @@ function waitsession(::T) where {T} error("You must implement `REPLSmuggler.wait
 Return a [`Session`](@ref) through a call to [`waitsession`](@ref).
 """
 function getsession(smuggler::Smuggler)
-    s = Session(waitsession(smuggler), smuggler.serializer, smuggler.history)
+    s = Session(waitsession(smuggler), smuggler.serializer)
     push!(smuggler.sessions, s)
     s
 end
@@ -153,6 +149,12 @@ function treatrequest(::Val{:exit}, session, repl_backend, msgid)
     @debug "Exiting" session repl_backend
     close(session)
     put!(session.responsechannel, Protocols.Result(msgid, "Done."))
+end
+function treatrequest(::Val{:configure}, session, repl_backend, msgid, settings)
+    @debug "Configuring" session repl_backend settings
+    if haskey(settings, "evalbyblocks")
+        session.sessionparams["evalbyblocks"] = settings["evalbyblocks"]
+    end
 end
 """
 Dispatch repeatedly the incoming requests of a session.
