@@ -150,4 +150,27 @@ function smuggle(exc::T, stackframes = stacktrace(Base.catch_backtrace())) where
     end
 end
 
+"""
+    smuggle(stacks::Base.ExceptionStack)
+
+Smuggle an exception stack. In the Julia REPL the `err` variable is implicitly defined and
+contains the stack from the last thrown error.
+
+# Examples
+```julia-repl
+julia> error("foo")
+ERROR: foo
+Stacktrace:
+[...]
+
+julia> smuggle(err)
+```
+"""
+function smuggle(stacks::Base.ExceptionStack)
+    # For nested exceptions there can be multiple stacks but for interactive use it should
+    # be good enough to just handle the first one.
+    stack = stacks[1]
+    return smuggle(stack.exception, stack.backtrace)
+end
+
 end
