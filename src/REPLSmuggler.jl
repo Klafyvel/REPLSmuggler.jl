@@ -14,6 +14,21 @@ const SMUGGLING_ADJECTIVES = ["covert", "stealthy", "illicit", "underground", "s
 
 yer_name() = rand(SMUGGLING_ADJECTIVES) * "_" * rand(SMUGGLING_NOUNS)
 
+# The canonical way is to use `showerror` which typically return a string of the form:
+# "Type: msg". However, for `T == ErrorException` the type is not included in the
+# message so we explicitely include it. (The reason is probably because in the Julia
+# REPL all errors are prefixed with "ERROR: " and then the generic error type was
+# consider superfluos).
+function stringify_error(err::T) where {T <: Exception}
+    exception_text = sprint(showerror, err)
+    if isempty(exception_text)
+        exception_text = string(T)
+    elseif T === ErrorException
+        exception_text = "ErrorException: " * exception_text
+    end
+    return exception_text
+end
+
 include("Protocols.jl")
 using .Protocols
 
@@ -131,7 +146,7 @@ function smuggle(exc::T, stackframes = stacktrace(Base.catch_backtrace())) where
         for frame in stackframes
     ]
     for session in Server.sessions(CURRENT_SMUGGLER)
-        put!(session.responsechannel, Protocols.Diagnostic(string(T), string(exc), frames))
+        put!(session.responsechannel, Protocols.Diagnostic(string(T), stringify_error(exc), frames))
     end
 end
 

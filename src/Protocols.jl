@@ -100,6 +100,8 @@ to sending an `exit` request.
 """
 module Protocols
 
+using ..REPLSmuggler: stringify_error
+
 "Name of the protocol implementation."
 const PROTOCOL_MAGIC = "REPLSmuggler"
 "Protocol version."
@@ -265,7 +267,7 @@ function Error(msgid, error::T, stackframe) where {T}
     ]
     ErrorResponse(
         msgid,
-        string(T), string(error), frames,
+        string(T), stringify_error(error), frames,
     )
 end
 function Error(exc::ProtocolException)

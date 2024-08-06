@@ -30,7 +30,7 @@ using MsgPack
                 (file = "bar.jl", line = 2, func = "bar()"),
             ],
         )
-        expected_array = [Protocols.RESPONSE, 0x01, ["ErrorException", "ErrorException(\"Foo\")", [("foo.jl", 1, "foo()"), ("bar.jl", 2, "bar()")]], nothing]
+        expected_array = [Protocols.RESPONSE, 0x01, ["ErrorException", "ErrorException: Foo", [("foo.jl", 1, "foo()"), ("bar.jl", 2, "bar()")]], nothing]
         @testset "Error" test_msg(msg, expected_array)
 
         msg = Protocols.Result(1, "foo")
