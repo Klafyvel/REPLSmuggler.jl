@@ -2,7 +2,7 @@ module REPLSmuggler
 
 using BaseDirs
 
-export smuggle
+export smuggle, showsmuggler
 
 const PROJECT = BaseDirs.Project("REPLSmuggler")
 
@@ -40,6 +40,17 @@ using .Server
 Store the current server.
 """
 CURRENT_SMUGGLER = nothing
+
+"""
+    Print the current smuggler path 
+"""
+function showsmuggler()
+    if CURRENT_SMUGGLER === nothing
+        println("No smuggler started, start one by running smuggle()")
+    else
+        println(CURRENT_SMUGGLER.vessel.path)
+    end
+end
 
 function smuggle(specific_smuggler, serializer)
     global CURRENT_SMUGGLER
