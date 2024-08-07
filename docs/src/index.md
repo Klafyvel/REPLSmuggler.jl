@@ -26,6 +26,8 @@ Task (runnable) @0x0000753a784c6bd0
 
 You are then able to send code and get notified when an error happens.
 
+At any point you can show the current smuggler by calling `showsmuggler()` in the REPL.
+
 `smuggle` can also be used the other way around, to directly send diagnostics
 to your editor. For example, if your editor has smuggled the following function:
 ```julia
