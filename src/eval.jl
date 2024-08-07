@@ -55,12 +55,11 @@ function evaluate_entry(session, msgid, file, line, value)
         # Now we put the correct file name and line number on the parsed
         # expression.
         renumber_evaluated_expression!(expr, current_line, file)
+        number_of_lines_evaluated = count('\n', eval_string)
+        current_line = current_line + number_of_lines_evaluated
         @debug "expr after renumbering of lines" expr
 
         repl_response, error = evaluate_expression(expr, session.evaluatein)
-        if !isnothing(error)
-            put!(session.responsechannel, Protocols.Error(msgid, error.exception, error.stack))
-        end
 
         @debug "Printing REPL response" repl_response
         hide_output = REPL.ends_with_semicolon(eval_string)
@@ -69,8 +68,14 @@ function evaluate_entry(session, msgid, file, line, value)
         REPL.LineEdit.reset_state(s)
         REPL.LineEdit.refresh_line(s)
 
-        number_of_lines_evaluated = count('\n', eval_string)
-        current_line = current_line + number_of_lines_evaluated
+        if !isnothing(error)
+            put!(session.responsechannel, Protocols.Error(msgid, error.exception, error.stack))
+        elseif !hide_output && !isnothing(first(repl_response))
+            io = IOBuffer()
+            show(io, MIME"text/plain"(), first(repl_response))
+            put!(session.responsechannel, Protocols.Result(msgid, current_line, String(take!(io))))
+        end
+
         if last(repl_response)
             @debug "Evaluation errored, stopping early." number_of_lines_evaluated
             break

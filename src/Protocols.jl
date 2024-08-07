@@ -53,8 +53,9 @@ server, it will raise an error.
 
 ## Responses of the server.
 
-The result field is a string of what would be printed in the REPL. It is empty if
-an error occured. 
+The result field is empty if an error occured. Otherwise it contains two elements:
+- `linenumber::UInt32`: Line that produced the output,
+- `output::String`: The output.
 
 If an error occured, then the error field is a three-elements array structured as follow:
 - `exception::String`: Name of the exception, *e.g.* `"ValueError"`,
@@ -105,7 +106,7 @@ using ..REPLSmuggler: stringify_error
 "Name of the protocol implementation."
 const PROTOCOL_MAGIC = "REPLSmuggler"
 "Protocol version."
-const PROTOCOL_VERSION = v"0.3"
+const PROTOCOL_VERSION = v"0.4"
 
 "MsgPackRPC message types."
 const MsgType = UInt8
@@ -192,13 +193,17 @@ astuple(e::ErrorResponse) = (
 )
 struct ResultResponse <: AbstractResponse
     msgid::UInt32
+    line::UInt32
     result::String
 end
 astuple(r::ResultResponse) = (
     RESPONSE,
     r.msgid,
     nothing,
-    r.result,
+    (
+        r.line,
+        r.result,
+    ),
 )
 
 "Represents a notification."
@@ -277,8 +282,9 @@ end
 """
     Result(msgid, result)
 """
-Result(msgid, result) = ResultResponse(
+Result(msgid, line, result) = ResultResponse(
     msgid,
+    line,
     result,
 )
 
