@@ -66,7 +66,7 @@ using REPLSmuggler.Protocols
     )
 
     # Result
-    Protocols.serialize(protocol, Protocols.Result(1, "foo"))
+    Protocols.serialize(protocol, Protocols.Result(1, 1, "foo"))
     @test isready(chan)
     response = take!(chan)
     @test test_response(
@@ -74,7 +74,7 @@ using REPLSmuggler.Protocols
             Protocols.RESPONSE,
             UInt32(1),
             nothing,
-            "foo",
+            (UInt32(1), "foo"),
         ),
     )
 
