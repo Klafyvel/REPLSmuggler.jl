@@ -38,10 +38,14 @@ struct Session{T}
     "The specific [`Protocols.Protocol`](@ref) used in this session."
     protocol::Protocols.Protocol
 end
+const DEFAULT_SESSION_DICT = Dict(
+    "evalbyblocks" => false, "showdir" => tempdir(), "enableimages" => true,
+    "iocontext" => Dict{Symbol, Any}(),
+)
 Session(specific, serializer) = Session(
     Channel(1),
     Channel(1),
-    Dict("evalbyblocks" => false, "showdir" => tempdir(), "enableimages" => true, "iocontext" => Dict{Symbol, Any}()),
+    deepcopy(DEFAULT_SESSION_DICT),
     Main,
     specific,
     Protocols.Protocol(serializer, io(specific)),
