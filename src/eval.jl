@@ -71,9 +71,18 @@ function evaluate_entry(session, msgid, file, line, value)
         if !isnothing(error)
             put!(session.responsechannel, Protocols.Error(msgid, error.exception, error.stack))
         elseif !hide_output && !isnothing(first(repl_response))
-            io = IOBuffer()
-            show(io, MIME"text/plain"(), first(repl_response))
-            put!(session.responsechannel, Protocols.Result(msgid, current_line, String(take!(io))))
+            index_mime = findfirst([Base.invokelatest(showable, mime, first(repl_response)) for mime in Protocols.IMAGE_MIME])
+            @debug "Show time." index_mime first(repl_response)
+            if isnothing(index_mime)
+                io = IOBuffer()
+                Base.invokelatest(show, io, MIME("text/plain"), first(repl_response))
+                put!(session.responsechannel, Protocols.Result(msgid, current_line, String(take!(io))))
+            else
+                filepath, io = mktemp(session.sessionparams["showdir"], cleanup = false)
+                Base.invokelatest(show, io, Protocols.IMAGE_MIME[index_mime], first(repl_response))
+                close(io)
+                put!(session.responsechannel, Protocols.Result(msgid, current_line, Protocols.IMAGE_MIME[index_mime], filepath))
+            end
         end
 
         if last(repl_response)

@@ -15,6 +15,7 @@ export Session, Smuggler, serve_repl
 
 function io end
 
+
 """
 The session of a client.
 """
@@ -23,7 +24,10 @@ struct Session{T}
     entrychannel::Channel
     "Where the outgoing requests are buffered."
     responsechannel::Channel
-    "A session might store additional parameters here. Currently the only one supported is `evalbyblocks`."
+    """A session might store additional parameters here. Currently supported:
+    - `evalbyblocks::Bool`: Controls evaluation of code chunks by block or by statements.
+    - `showdir::String`: Path to a directory to store images.
+    """
     sessionparams::Dict
     "The module where the code should be evaluated (currently: Main)"
     evaluatein::Module
@@ -32,7 +36,14 @@ struct Session{T}
     "The specific [`Protocols.Protocol`](@ref) used in this session."
     protocol::Protocols.Protocol
 end
-Session(specific, serializer) = Session(Channel(1), Channel(1), Dict("evalbyblocks" => false), Main, specific, Protocols.Protocol(serializer, io(specific)))
+Session(specific, serializer) = Session(
+    Channel(1),
+    Channel(1),
+    Dict("evalbyblocks" => false, "showdir" => tempdir()),
+    Main,
+    specific,
+    Protocols.Protocol(serializer, io(specific)),
+)
 function Base.show(io::IO, ::Session{T}) where {T}
     print(io, "Session{$T}()")
 end
@@ -159,6 +170,9 @@ function treatrequest(::Val{:configure}, session, repl_backend, msgid, settings)
     end
     if haskey(settings, "evalbyblocks")
         session.sessionparams["evalbyblocks"] = settings["evalbyblocks"]
+    end
+    if haskey(settings, "showdir")
+        session.sessionparams["showdir"] = settings["showdir"]
     end
 end
 """
