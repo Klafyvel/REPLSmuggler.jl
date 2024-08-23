@@ -26,13 +26,18 @@ function REPLSmuggler.smuggle(result::JET.JETCallResult)
         error("No smuggling route. First call `smuggle()` and connect with your editor to open one.")
     end
     for report in JET.get_reports(result)
-        showpoint = first(report.vst)
-        path = transformpath(showpoint.file)
+        n = length(report.vst)
+        frames = Vector{Tuple{String, Int, String}}(undef, n)
+        for (i, showpoint) in pairs(report.vst)
+            path = transformpath(showpoint.file)
+            line = showpoint.line
+            func = string(showpoint.linfo)
+            j = n + 1 - i # Reverse the order to match stacktrace ordering
+            frames[j] = (path, line, func)
+        end
         message = sprint(JET.print_report, report)
-        line = showpoint.line
-        func = string(showpoint.linfo)
         for session in REPLSmuggler.Server.sessions(REPLSmuggler.CURRENT_SMUGGLER)
-            put!(session.responsechannel, REPLSmuggler.Protocols.Diagnostic(string(typeof(report)), message, [(path, line, func)]))
+            put!(session.responsechannel, REPLSmuggler.Protocols.Diagnostic(string(typeof(report)), message, frames))
         end
     end
 end
