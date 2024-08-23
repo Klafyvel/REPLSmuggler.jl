@@ -64,7 +64,9 @@ Has to be implemented for each specific server. See for example `SocketSmugglers
 
 Should return the specific of a session used to build a [`Session`](@ref).
 """
-function waitsession(::T) where {T} error("You must implement `REPLSmuggler.waitsession` for type $T")  end
+function waitsession(::T) where {T}
+    error("You must implement `REPLSmuggler.waitsession` for type $T")
+end
 """
     getsession(smuggler)
 

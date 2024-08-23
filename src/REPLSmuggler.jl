@@ -152,10 +152,7 @@ function smuggle(exc::T, stackframes = stacktrace(Base.catch_backtrace())) where
     if isnothing(CURRENT_SMUGGLER)
         error("No smuggling route. First call `smuggle()` and connect with your editor to open one.")
     end
-    frames = [
-        (frame.file, frame.line, frame.func)
-        for frame in stackframes
-    ]
+    frames = [(frame.file, frame.line, frame.func) for frame in stackframes]
     for session in Server.sessions(CURRENT_SMUGGLER)
         put!(session.responsechannel, Protocols.Diagnostic(string(T), stringify_error(exc), frames))
     end

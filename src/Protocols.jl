@@ -261,10 +261,7 @@ end
     Error(msgid, error, stackframe)
 """
 function Error(msgid, error::T, stackframe) where {T}
-    frames = [
-        (frame.file, frame.line, frame.func)
-        for frame in stackframe
-    ]
+    frames = [(frame.file, frame.line, frame.func) for frame in stackframe]
     ErrorResponse(
         msgid,
         string(T), stringify_error(error), frames,
