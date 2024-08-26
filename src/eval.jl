@@ -21,6 +21,46 @@ function Base.iterate(s::StatementsIterator, current_index = 1)
     return (eval_string, new_index)
 end
 
+function stripblock(s)
+    retlines = String[]
+    nmin = typemax(Int)
+    for line in eachline(IOBuffer(s); keep = true)
+        push!(retlines, line)
+        if !all(isspace, line)
+            # Non-empty line, count number of leading spaces
+            n = 0
+            for c in line
+                c == ' ' || break
+                n += 1
+            end
+            nmin = min(nmin, n)
+        end
+    end
+    # Drop empty leading/trailing lines
+    while !isempty(retlines) && all(isspace, retlines[1])
+        popfirst!(retlines)
+    end
+    while !isempty(retlines) && all(isspace, retlines[end])
+        pop!(retlines)
+    end
+    # Drop trailing newline char from the last line
+    if !isempty(retlines)
+        retlines[end] = chomp(retlines[end])
+    end
+    # Join while stripping leading whitespace
+    io = IOBuffer()
+    for line in retlines
+        idx = nmin + 1
+        if all(isspace, line)
+            # Empty line, strip as much leading space as available, but max out at nmin
+            i = something(findfirst(x -> x != ' ', line), 1)
+            idx = min(i, idx)
+        end
+        write(io, @view(line[idx:end]))
+    end
+    return String(take!(io))
+end
+
 """
     evaluate_entry(session, msgid, file, line, value)
 
@@ -47,7 +87,7 @@ function evaluate_entry(session, msgid, file, line, value)
     end
     for eval_string in iterator
         @debug "Printing eval string and commiting to history." eval_string
-        REPL.LineEdit.edit_insert(s, strip(eval_string))
+        REPL.LineEdit.edit_insert(s, stripblock(eval_string))
         REPL.LineEdit.commit_line(repl.mistate)
         REPL.history_reset_state(repl.mistate.current_mode.hist)
 
