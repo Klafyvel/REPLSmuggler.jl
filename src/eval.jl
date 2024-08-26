@@ -21,6 +21,28 @@ function Base.iterate(s::StatementsIterator, current_index = 1)
     return (eval_string, new_index)
 end
 
+function stripblock(s)
+    retlines = String[]
+    commonlspace = typemax(Int) 
+    for line in split(s,'\n')
+        if isempty(strip(line))
+            continue
+        end
+        lspace = length(line) - length(lstrip(line))  
+        if lspace < commonlspace
+            commonlspace = lspace
+        end
+    end
+    for line in split(s,'\n')
+        if isempty(strip(line))
+            continue
+        else
+            push!(retlines,line[commonlspace+1:end])
+        end
+    end
+    return join(retlines,'\n')
+end
+
 """
     evaluate_entry(session, msgid, file, line, value)
 
@@ -47,7 +69,7 @@ function evaluate_entry(session, msgid, file, line, value)
     end
     for eval_string in iterator
         @debug "Printing eval string and commiting to history." eval_string
-        REPL.LineEdit.edit_insert(s, strip(eval_string))
+        REPL.LineEdit.edit_insert(s, stripblock(eval_string))
         REPL.LineEdit.commit_line(repl.mistate)
         REPL.history_reset_state(repl.mistate.current_mode.hist)
 
