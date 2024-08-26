@@ -23,24 +23,42 @@ end
 
 function stripblock(s)
     retlines = String[]
-    commonlspace = typemax(Int) 
-    for line in split(s,'\n')
-        if isempty(strip(line))
-            continue
-        end
-        lspace = length(line) - length(lstrip(line))  
-        if lspace < commonlspace
-            commonlspace = lspace
-        end
-    end
-    for line in split(s,'\n')
-        if isempty(strip(line))
-            continue
-        else
-            push!(retlines,line[commonlspace+1:end])
+    nmin = typemax(Int)
+    for line in eachline(IOBuffer(s); keep = true)
+        push!(retlines, line)
+        if !all(isspace, line)
+            # Non-empty line, count number of leading spaces
+            n = 0
+            for c in line
+                c == ' ' || break
+                n += 1
+            end
+            nmin = min(nmin, n)
         end
     end
-    return join(retlines,'\n')
+    # Drop empty leading/trailing lines
+    while !isempty(retlines) && all(isspace, retlines[1])
+        popfirst!(retlines)
+    end
+    while !isempty(retlines) && all(isspace, retlines[end])
+        pop!(retlines)
+    end
+    # Drop trailing newline char from the last line
+    if !isempty(retlines)
+        retlines[end] = chomp(retlines[end])
+    end
+    # Join while stripping leading whitespace
+    io = IOBuffer()
+    for line in retlines
+        idx = nmin + 1
+        if all(isspace, line)
+            # Empty line, strip as much leading space as available, but max out at nmin
+            i = something(findfirst(x -> x != ' ', line), 1)
+            idx = min(i, idx)
+        end
+        write(io, @view(line[idx:end]))
+    end
+    return String(take!(io))
 end
 
 """
