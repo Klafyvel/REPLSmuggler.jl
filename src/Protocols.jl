@@ -46,6 +46,9 @@ server, it will raise an error.
   Currently, the following settings are supported:
     - `evalbyblocks::Bool` should the session evaluate entries by block rather than
   by toplevel statements?
+    - `showdir::String`: directory to store images.
+    - `enableimages::String`: Should we display objects displayable as images be showed as images?
+    - `iocontext::Dict{String,Any}`: IOContext options for `show`.
 - `interrupt`: Interrupt the current evaluation.
   No parameter.
 - `exit`: Stop the current session.

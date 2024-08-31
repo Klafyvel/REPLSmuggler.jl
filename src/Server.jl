@@ -27,6 +27,8 @@ struct Session{T}
     """A session might store additional parameters here. Currently supported:
     - `evalbyblocks::Bool`: Controls evaluation of code chunks by block or by statements.
     - `showdir::String`: Path to a directory to store images.
+    - `enableimages::Bool`: enable images display?
+    - `iocontext::Dict{Symbol,Any}`: IOContext options for `show`.
     """
     sessionparams::Dict
     "The module where the code should be evaluated (currently: Main)"
@@ -39,7 +41,7 @@ end
 Session(specific, serializer) = Session(
     Channel(1),
     Channel(1),
-    Dict("evalbyblocks" => false, "showdir" => tempdir()),
+    Dict("evalbyblocks" => false, "showdir" => tempdir(), "enableimages"=>true, "iocontext"=>Dict{Symbol, Any}()),
     Main,
     specific,
     Protocols.Protocol(serializer, io(specific)),
@@ -168,11 +170,16 @@ function treatrequest(::Val{:configure}, session, repl_backend, msgid, settings)
     if isempty(settings)
         return
     end
-    if haskey(settings, "evalbyblocks")
-        session.sessionparams["evalbyblocks"] = settings["evalbyblocks"]
-    end
-    if haskey(settings, "showdir")
-        session.sessionparams["showdir"] = settings["showdir"]
+    for k in keys(session.sessionparams)
+        if haskey(settings, k)
+            if k == "iocontext"
+                if haskey(settings[k], "displaysize")
+                    settings[k]["displaysize"] = tuple(Int.(settings[k]["displaysize"])...)
+                end
+                settings[k] = Dict([Symbol(k)=>v for (k,v) in settings[k]])
+            end
+            session.sessionparams[k] = settings[k]
+        end
     end
 end
 """
