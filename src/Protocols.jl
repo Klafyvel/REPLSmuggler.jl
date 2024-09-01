@@ -300,13 +300,13 @@ end
     Result(msgid, line, [mime=MIME("text/plain"),] result)
 """
 Result(msgid, line, result) = ResultResponse(
-    msgid,
+    trunc(UInt32, msgid),
     trunc(UInt32, line),
     MIME("text/plain"),
     result,
 )
 Result(msgid, line, mime, result) = ResultResponse(
-    msgid,
+    trunc(UInt32, msgid),
     trunc(UInt32, line),
     mime,
     result,

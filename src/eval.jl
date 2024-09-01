@@ -75,7 +75,7 @@ function evaluate_entry(session, msgid, file, line, value)
             @debug "Show time." index_mime first(repl_response)
             if isnothing(index_mime)
                 io = IOBuffer()
-                ctx = IOContext(io, [k=>v for (k,v) in session.sessionparams["iocontext"]]...)
+                ctx = IOContext(io, [k => v for (k, v) in session.sessionparams["iocontext"]]...)
                 Base.invokelatest(show, ctx, MIME("text/plain"), first(repl_response))
                 put!(session.responsechannel, Protocols.Result(msgid, current_line, String(take!(io))))
             else

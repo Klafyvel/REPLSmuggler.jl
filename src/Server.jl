@@ -41,7 +41,7 @@ end
 Session(specific, serializer) = Session(
     Channel(1),
     Channel(1),
-    Dict("evalbyblocks" => false, "showdir" => tempdir(), "enableimages"=>true, "iocontext"=>Dict{Symbol, Any}()),
+    Dict("evalbyblocks" => false, "showdir" => tempdir(), "enableimages" => true, "iocontext" => Dict{Symbol, Any}()),
     Main,
     specific,
     Protocols.Protocol(serializer, io(specific)),
@@ -176,7 +176,7 @@ function treatrequest(::Val{:configure}, session, repl_backend, msgid, settings)
                 if haskey(settings[k], "displaysize")
                     settings[k]["displaysize"] = tuple(Int.(settings[k]["displaysize"])...)
                 end
-                settings[k] = Dict([Symbol(k)=>v for (k,v) in settings[k]])
+                settings[k] = Dict([Symbol(k) => v for (k, v) in settings[k]])
             end
             session.sessionparams[k] = settings[k]
         end

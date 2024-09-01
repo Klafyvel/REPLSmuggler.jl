@@ -34,7 +34,7 @@ using MsgPack
         @testset "Error" test_msg(msg, expected_array)
 
         msg = Protocols.Result(1, 1, "foo")
-        expected_array = [Protocols.RESPONSE, 0x01, nothing, [UInt32(1), "foo"]]
+        expected_array = [Protocols.RESPONSE, 0x01, nothing, [UInt32(1), "text/plain", "foo"]]
         @testset "Result" test_msg(msg, expected_array)
     end
 

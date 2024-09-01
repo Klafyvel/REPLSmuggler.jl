@@ -74,7 +74,7 @@ using REPLSmuggler.Protocols
             Protocols.RESPONSE,
             UInt32(1),
             nothing,
-            (UInt32(1), "foo"),
+            (UInt32(1), "text/plain", "foo"),
         ),
     )
 
