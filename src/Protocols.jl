@@ -46,6 +46,9 @@ server, it will raise an error.
   Currently, the following settings are supported:
     - `evalbyblocks::Bool` should the session evaluate entries by block rather than
   by toplevel statements?
+    - `showdir::String`: directory to store images.
+    - `enableimages::String`: Should we display objects displayable as images be showed as images?
+    - `iocontext::Dict{String,Any}`: IOContext options for `show`.
 - `interrupt`: Interrupt the current evaluation.
   No parameter.
 - `exit`: Stop the current session.
@@ -53,8 +56,10 @@ server, it will raise an error.
 
 ## Responses of the server.
 
-The result field is a string of what would be printed in the REPL. It is empty if
-an error occured. 
+The result field is empty if an error occured. Otherwise it contains three elements:
+- `linenumber::UInt32`: Line that produced the output,
+- `mime::String`: MIME of the answer. If it is `text/plain` the output should be displayed as is. The other supported MIME types are listed in [`IMAGE_MIME`](@ref) and are meant to display image results.
+- `output`: The output. If `mime` is `text/plain` this is a `String` to be displayed, otherwise it is a path to an image (`String`) corresponding to the MIME type.
 
 If an error occured, then the error field is a three-elements array structured as follow:
 - `exception::String`: Name of the exception, *e.g.* `"ValueError"`,
@@ -105,7 +110,17 @@ using ..REPLSmuggler: stringify_error
 "Name of the protocol implementation."
 const PROTOCOL_MAGIC = "REPLSmuggler"
 "Protocol version."
-const PROTOCOL_VERSION = v"0.3"
+const PROTOCOL_VERSION = v"0.4"
+
+"Supported image MIME types."
+const IMAGE_MIME = [
+    MIME("image/png"),
+    MIME("image/jpg"),
+    MIME("image/jpeg"),
+    MIME("image/gif"),
+    MIME("image/webp"),
+    MIME("image/avif"),
+]
 
 "MsgPackRPC message types."
 const MsgType = UInt8
@@ -190,16 +205,23 @@ astuple(e::ErrorResponse) = (
     ),
     nothing,
 )
-struct ResultResponse <: AbstractResponse
+struct ResultResponse{T} <: AbstractResponse
     msgid::UInt32
-    result::String
+    line::UInt32
+    mime::MIME{T}
+    result
 end
 astuple(r::ResultResponse) = (
     RESPONSE,
     r.msgid,
     nothing,
-    r.result,
+    (
+        r.line,
+        string(r.mime),
+        r.result,
+    ),
 )
+Base.show(io::IO, ::MIME"text/plain", r::ResultResponse) = show(io, "ResultResponse($(r.msgid), $(r.line), $(r.mime), ...)")
 
 "Represents a notification."
 struct Notification <: AbstractMsgPackRPC
@@ -275,10 +297,18 @@ function Error(exc::ProtocolException)
 end
 
 """
-    Result(msgid, result)
+    Result(msgid, line, [mime=MIME("text/plain"),] result)
 """
-Result(msgid, result) = ResultResponse(
-    msgid,
+Result(msgid, line, result) = ResultResponse(
+    trunc(UInt32, msgid),
+    trunc(UInt32, line),
+    MIME("text/plain"),
+    result,
+)
+Result(msgid, line, mime, result) = ResultResponse(
+    trunc(UInt32, msgid),
+    trunc(UInt32, line),
+    mime,
     result,
 )
 

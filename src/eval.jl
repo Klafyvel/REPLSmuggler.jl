@@ -95,12 +95,11 @@ function evaluate_entry(session, msgid, file, line, value)
         # Now we put the correct file name and line number on the parsed
         # expression.
         renumber_evaluated_expression!(expr, current_line, file)
+        number_of_lines_evaluated = count('\n', eval_string)
+        current_line = current_line + number_of_lines_evaluated
         @debug "expr after renumbering of lines" expr
 
         repl_response, error = evaluate_expression(expr, session.evaluatein)
-        if !isnothing(error)
-            put!(session.responsechannel, Protocols.Error(msgid, error.exception, error.stack))
-        end
 
         @debug "Printing REPL response" repl_response
         hide_output = REPL.ends_with_semicolon(eval_string)
@@ -109,8 +108,25 @@ function evaluate_entry(session, msgid, file, line, value)
         REPL.LineEdit.reset_state(s)
         REPL.LineEdit.refresh_line(s)
 
-        number_of_lines_evaluated = count('\n', eval_string)
-        current_line = current_line + number_of_lines_evaluated
+        if !isnothing(error)
+            put!(session.responsechannel, Protocols.Error(msgid, error.exception, error.stack))
+        elseif !hide_output && !isnothing(first(repl_response))
+            index_mime = session.sessionparams["enableimages"] ? findfirst([Base.invokelatest(showable, mime, first(repl_response)) for mime in Protocols.IMAGE_MIME]) : nothing
+            @debug "Show time." index_mime first(repl_response)
+            if isnothing(index_mime)
+                io = IOBuffer()
+                ctx = IOContext(io, [k => v for (k, v) in session.sessionparams["iocontext"]]...)
+                Base.invokelatest(show, ctx, MIME("text/plain"), first(repl_response))
+                put!(session.responsechannel, Protocols.Result(msgid, current_line, String(take!(io))))
+            else
+                mkpath(session.sessionparams["showdir"])
+                filepath, io = mktemp(session.sessionparams["showdir"], cleanup = false)
+                Base.invokelatest(show, io, Protocols.IMAGE_MIME[index_mime], first(repl_response))
+                close(io)
+                put!(session.responsechannel, Protocols.Result(msgid, current_line, Protocols.IMAGE_MIME[index_mime], filepath))
+            end
+        end
+
         if last(repl_response)
             @debug "Evaluation errored, stopping early." number_of_lines_evaluated
             break
