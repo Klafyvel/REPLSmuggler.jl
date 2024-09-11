@@ -10,7 +10,7 @@ Base.IteratorEltype(::Type{StatementsIterator}) = Base.HasEltype()
 Base.eltype(::Type{StatementsIterator}) = String
 
 function Base.iterate(s::StatementsIterator, current_index = 1)
-    if current_index ≥ lastindex(s.evalstring)
+    if current_index > lastindex(s.evalstring)
         return nothing
     end
     _, new_index = JuliaSyntax.parsestmt(
