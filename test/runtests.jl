@@ -8,5 +8,5 @@ using Aqua
     end
     include("protocol.jl")
     include("msgpackserializer.jl")
-    # Write your tests here.
+    include("evaltests.jl")
 end

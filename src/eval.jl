@@ -62,16 +62,15 @@ function stripblock(s)
 end
 
 """
-    evaluate_entry(session, msgid, file, line, value)
+    evaluate_entry(session, msgid, file, line, value, repl=Base.active_repl))
 
 Evaluate the code in `value` in the context of the given `session`, replacing the
 context of the code with `file` and `line`. If an error occurs, it will put a 
 using Base: JuliaSyntax
 [`Protocols.Error`](@ref) to the outgoing channel of the session.
 """
-function evaluate_entry(session, msgid, file, line, value)
+function evaluate_entry(session, msgid, file, line, value, repl = Base.active_repl)
     @debug "Evaluating entry" session file line value
-    repl = Base.active_repl
     current_line = line
     julia_prompt = repl.interface.modes[1] # Fragile, but assumed throughout REPL.jl
     current_mode = repl.mistate.current_mode
@@ -149,6 +148,7 @@ function renumber_evaluated_expression!(expression, firstline, file)
         end
     end
 end
+
 function evaluate_expression(expression, evalmodule)
     response = nothing
     error = nothing
