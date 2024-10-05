@@ -26,11 +26,11 @@ using MsgPack
 
         msg = Protocols.Error(
             1, ErrorException("Foo"), [
-                (file = "foo.jl", line = 1, func = "foo()"),
-                (file = "bar.jl", line = 2, func = "bar()"),
+                (file = "foo.jl", line = 1, func = "foo()", parentmodule = "Main"),
+                (file = "bar.jl", line = 2, func = "bar()", parentmodule = "Main"),
             ],
         )
-        expected_array = [Protocols.RESPONSE, 0x01, ["ErrorException", "ErrorException: Foo", [("foo.jl", 1, "foo()"), ("bar.jl", 2, "bar()")]], nothing]
+        expected_array = [Protocols.RESPONSE, 0x01, ["ErrorException", "ErrorException: Foo", [("foo.jl", 1, "foo()", "Main"), ("bar.jl", 2, "bar()", "Main")]], nothing]
         @testset "Error" test_msg(msg, expected_array)
 
         msg = Protocols.Result(1, 1, "foo")

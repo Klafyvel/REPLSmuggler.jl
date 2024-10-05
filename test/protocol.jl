@@ -43,8 +43,8 @@ using REPLSmuggler.Protocols
     Protocols.serialize(
         protocol, Protocols.Error(
             1, ErrorException("Foo"), [
-                (file = "foo.jl", line = 1, func = "foo()"),
-                (file = "bar.jl", line = 2, func = "bar()"),
+                (file = "foo.jl", line = 1, func = "foo()", parentmodule = "Main"),
+                (file = "bar.jl", line = 2, func = "bar()", parentmodule = "Main"),
             ],
         ),
     )
@@ -57,8 +57,8 @@ using REPLSmuggler.Protocols
             (
                 "ErrorException", "ErrorException: Foo",
                 [
-                    ("foo.jl", 1, "foo()"),
-                    ("bar.jl", 2, "bar()"),
+                    ("foo.jl", 1, "foo()", "Main"),
+                    ("bar.jl", 2, "bar()", "Main"),
                 ],
             ),
             nothing,
