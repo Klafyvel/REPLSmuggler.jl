@@ -61,6 +61,22 @@ function stripblock(s)
     return String(take!(io))
 end
 
+function scrub_repl_backtrace(backtrace)
+    scrubbed_by_base = Base.scrub_repl_backtrace(backtrace)
+    scrubbed = []
+    for sf in scrubbed_by_base
+        parentmodule = Base.parentmodule(sf)
+        if parentmodule == Base
+            # Taken from Atom.jl: src/utils.jl
+            path = normpath(Sys.BINDIR::String, Base.DATAROOTDIR, "julia", "base", string(sf.file))
+        else
+            path = sf.file
+        end
+        push!(scrubbed, (file = path, line = sf.line, func = string(sf.func), parentmodule = parentmodule))
+    end
+    return scrubbed
+end
+
 """
     evaluate_entry(session, msgid, file, line, value, repl=Base.active_repl))
 
@@ -108,7 +124,8 @@ function evaluate_entry(session, msgid, file, line, value, repl = Base.active_re
         REPL.LineEdit.refresh_line(s)
 
         if !isnothing(error)
-            put!(session.responsechannel, Protocols.Error(msgid, error.exception, error.stack))
+            stack = scrub_repl_backtrace(error.stack)
+            put!(session.responsechannel, Protocols.Error(msgid, error.exception, stack))
         elseif !hide_output && !isnothing(first(repl_response))
             index_mime = session.sessionparams["enableimages"] ? findfirst([Base.invokelatest(showable, mime, first(repl_response)) for mime in Protocols.IMAGE_MIME]) : nothing
             @debug "Show time." index_mime first(repl_response)

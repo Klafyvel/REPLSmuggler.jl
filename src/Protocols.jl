@@ -65,7 +65,7 @@ If an error occured, then the error field is a three-elements array structured a
 - `exception::String`: Name of the exception, *e.g.* `"ValueError"`,
 - `exception_text::String`: Text, *e.g.* `"This value cannot be < 0."`,
 - `stacktrace::Vector{Tuple{String, UInt32, String}}`: The stacktrace, with each 
-  row being `(file, line, function)`.
+  row being `(file, line, function, module)`. Module can be `nil`.
 
 ## Notifications by the server.
 
@@ -110,7 +110,7 @@ using ..REPLSmuggler: stringify_error
 "Name of the protocol implementation."
 const PROTOCOL_MAGIC = "REPLSmuggler"
 "Protocol version."
-const PROTOCOL_VERSION = v"0.4"
+const PROTOCOL_VERSION = v"0.5"
 
 "Supported image MIME types."
 const IMAGE_MIME = [
@@ -283,7 +283,7 @@ end
     Error(msgid, error, stackframe)
 """
 function Error(msgid, error::T, stackframe) where {T}
-    frames = [(frame.file, frame.line, frame.func) for frame in stackframe]
+    frames = [(frame.file, frame.line, frame.func, isnothing(frame.parentmodule) ? nothing : string(frame.parentmodule)) for frame in stackframe]
     ErrorResponse(
         msgid,
         string(T), stringify_error(error), frames,
