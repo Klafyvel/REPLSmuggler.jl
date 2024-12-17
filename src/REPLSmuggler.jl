@@ -45,7 +45,7 @@ CURRENT_SMUGGLER = nothing
     Print the current smuggler path 
 """
 function showsmuggler()
-    if CURRENT_SMUGGLER === nothing
+    return if CURRENT_SMUGGLER === nothing
         println("No smuggler started, start one by running smuggle()")
     else
         println(CURRENT_SMUGGLER.vessel.path)
@@ -55,7 +55,7 @@ end
 function smuggle(specific_smuggler, serializer)
     global CURRENT_SMUGGLER
     CURRENT_SMUGGLER = Smuggler(specific_smuggler, serializer, Set{Session}())
-    serve_repl(CURRENT_SMUGGLER)
+    return serve_repl(CURRENT_SMUGGLER)
 end
 
 include("SocketSmugglers.jl")
@@ -105,7 +105,7 @@ function smuggle(; basepath = basepath(), serializer = MsgPack)
     while ispath(joinpath(basepath, name))
         name = yer_name()
     end
-    smuggle(SocketSmuggler(joinpath(basepath, name)), serializer)
+    return smuggle(SocketSmuggler(joinpath(basepath, name)), serializer)
 end
 
 """
@@ -127,6 +127,7 @@ function smuggle(title, diagnostic, filename, line, func)
             Protocols.Diagnostic(title, diagnostic, [(filename, line, func)]),
         )
     end
+    return
 end
 
 """
@@ -156,6 +157,7 @@ function smuggle(exc::T, stackframes = stacktrace(Base.catch_backtrace())) where
     for session in Server.sessions(CURRENT_SMUGGLER)
         put!(session.responsechannel, Protocols.Diagnostic(string(T), stringify_error(exc), frames))
     end
+    return
 end
 
 """

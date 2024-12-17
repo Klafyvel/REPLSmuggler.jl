@@ -9,12 +9,12 @@ using REPLSmuggler.Protocols
 
 function Protocols.serialize(protocol::Protocols.Protocol{MsgPack}, msg::Protocols.AbstractMsgPackRPC)
     io = protocol.io
-    pack(io, msg)
+    return pack(io, msg)
 end
 
 function Protocols.deserialize(protocol::Protocols.Protocol{MsgPack})
     io = protocol.io
-    unpack(io, Protocols.Request)
+    return unpack(io, Protocols.Request)
 end
 
 MsgPack.msgpack_type(::Type{Protocols.MsgType}) = MsgPack.IntegerType()

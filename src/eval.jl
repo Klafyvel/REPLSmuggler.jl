@@ -148,7 +148,7 @@ function evaluate_entry(session, msgid, file, line, value, repl = Base.active_re
             break
         end
     end
-    REPL.transition(repl.mistate, current_mode)
+    return REPL.transition(repl.mistate, current_mode)
 end
 
 function renumber_evaluated_expression!(expression, firstline, file)
@@ -164,6 +164,7 @@ function renumber_evaluated_expression!(expression, firstline, file)
             node.args = new_args
         end
     end
+    return
 end
 
 function evaluate_expression(expression, evalmodule)

@@ -167,7 +167,7 @@ struct Request <: AbstractMsgPackRPC
         if !isvalidrequest(method, params)
             throw(ProtocolException(msgid, "Invalid method `$method` with $(length(params)) parameters."))
         end
-        try
+        return try
             new(msgid, method, params)
         catch e
             throw(ProtocolException(msgid, "Invalid request: $e."))
@@ -178,7 +178,7 @@ function Request(array)
     if length(array) != 4
         throw(ProtocolException("Invalid request of length $(length(array)): $array"))
     end
-    Request(array[2:end]...)
+    return Request(array[2:end]...)
 end
 astuple(r::Request) = (
     REQUEST,
@@ -232,7 +232,7 @@ function Notification(array)
     if length(array) != 2
         throw(ProtocolException("Invalid notification of length $(length(array))."))
     end
-    Notification(array...)
+    return Notification(array...)
 end
 astuple(notification::Notification) = (
     NOTIFICATION,
@@ -273,7 +273,7 @@ Handshake() = Notification("handshake", [PROTOCOL_MAGIC, string(PROTOCOL_VERSION
 See protocol's definition and build `stackframe` accordingly.
 """
 function Diagnostic(title, diagnostic, stackframe)
-    Notification(
+    return Notification(
         "diagnostic",
         [title, diagnostic, stackframe],
     )
@@ -284,13 +284,13 @@ end
 """
 function Error(msgid, error::T, stackframe) where {T}
     frames = [(frame.file, frame.line, frame.func, isnothing(frame.parentmodule) ? nothing : string(frame.parentmodule)) for frame in stackframe]
-    ErrorResponse(
+    return ErrorResponse(
         msgid,
         string(T), stringify_error(error), frames,
     )
 end
 function Error(exc::ProtocolException)
-    ErrorResponse(
+    return ErrorResponse(
         something(exc.msgid, 0),
         "ProtocolException", exc.msg, [],
     )
@@ -325,6 +325,6 @@ A [`ProtocolException`](@ref) might be raised if the request is malformed.
 """
 function dispatchonmessage(protocol::Protocol, f, args...; kwargs...)
     request = deserialize(protocol)
-    f(Val(Symbol(request.method)), args..., request.msgid, request.params...; kwargs...)
+    return f(Val(Symbol(request.method)), args..., request.msgid, request.params...; kwargs...)
 end
 end

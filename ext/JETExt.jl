@@ -40,6 +40,7 @@ function REPLSmuggler.smuggle(result::JET.JETCallResult)
             put!(session.responsechannel, REPLSmuggler.Protocols.Diagnostic(string(typeof(report)), message, frames))
         end
     end
+    return
 end
 
 end

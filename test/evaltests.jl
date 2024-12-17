@@ -31,7 +31,7 @@ function kill_timer(delay)
         # e.g. `close(stdout_read); close(stdin_write)`
         test_task.queue === nothing || Base.list_deletefirst!(test_task.queue, test_task)
         schedule(test_task, "hard kill repl test"; error = true)
-        print(stderr, "WARNING: attempting hard kill of repl test after exceeding timeout\n")
+        return print(stderr, "WARNING: attempting hard kill of repl test after exceeding timeout\n")
     end
     return Timer(kill_test, delay)
 end
@@ -61,7 +61,7 @@ function fake_repl(@nospecialize(f); options::REPL.Options = REPL.Options(confir
     #display(read(output.out, String))
     Base.wait(t)
     close(hard_kill)
-    nothing
+    return nothing
 end
 
 # Writing ^C to the repl will cause sigint, so let's not die on that
@@ -73,21 +73,22 @@ function consume_responses(responsechannel, result, mime = MIME("text/plain"); f
     @test response.msgid == msgid
     @test response.line == line
     @test response.mime == mime
-    @test response.result == string(result)
+    return @test response.result == string(result)
 end
 function consume_responses(responsechannel, results::Vector; file, line, msgid)
     for (producerline, result, mime) in results
         consume_responses(responsechannel, result, mime; file, msgid, line = producerline)
     end
+    return
 end
 function consume_responses(responsechannel, results::Nothing; file, line, msgid)
 end
 function test_ans_value(result)
-    @test getglobal(Base.MainInclude, :ans) == result
+    return @test getglobal(Base.MainInclude, :ans) == result
 end
 function test_ans_value(results::Vector)
     result = last(results)[2]
-    test_ans_value(result)
+    return test_ans_value(result)
 end
 reg_cmd = r"(\r\e\[0Kjulia>(.|\n)+)?\r\e\[0Kjulia> (\r\e\[7C)+(?<cmd>(.|\n)+)\r\e\[[0-9]+C\n"
 function test_printed_result(stdout_read, result; test_print_results, collect_print_results)
@@ -117,7 +118,7 @@ function test_printed_result(stdout_read, result; test_print_results, collect_pr
     end
     # Consume the julia prompt print
     r = readuntil(stdout_read, JULIA_PROMPT_OVERRIDE)
-    printed_command, printed_result
+    return printed_command, printed_result
 end
 function test_printed_result(stdout_read, results::Vector; test_print_results, collect_print_results)
     printed = []
@@ -125,7 +126,7 @@ function test_printed_result(stdout_read, results::Vector; test_print_results, c
         printed_command, printed_result = test_printed_result(stdout_read, result; test_print_results, collect_print_results)
         push!(printed, (printed_command, printed_result))
     end
-    printed
+    return printed
 end
 
 function eval_test_cmd(stdout_read, repl, session, cmd, result; file = "test.jl", line = 1, msgid = 0x01, test_print_results = true, test_ans = true, collect_print_results = true)
@@ -142,7 +143,7 @@ function eval_test_cmd(stdout_read, repl, session, cmd, result; file = "test.jl"
     # Test what's been printed
     res = test_printed_result(stdout_read, result; test_print_results, collect_print_results)
     flushed = String(readavailable(stdout_read))
-    res
+    return res
 end
 
 @testset "Eval tests" begin

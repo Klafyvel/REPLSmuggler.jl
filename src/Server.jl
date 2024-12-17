@@ -51,13 +51,13 @@ Session(specific, serializer) = Session(
     Protocols.Protocol(serializer, io(specific)),
 )
 function Base.show(io::IO, ::Session{T}) where {T}
-    print(io, "Session{$T}()")
+    return print(io, "Session{$T}()")
 end
 Base.isopen(s::Session) = isopen(s.smugglerspecific)
 function Base.close(s::Session)
     close(s.entrychannel)
     close(s.responsechannel)
-    close(s.smugglerspecific)
+    return close(s.smugglerspecific)
 end
 Protocols.dispatchonmessage(s::Session, args...; kwargs...) = Protocols.dispatchonmessage(s.protocol, args...; kwargs...)
 
@@ -92,18 +92,18 @@ Return a [`Session`](@ref) through a call to [`waitsession`](@ref).
 function getsession(smuggler::Smuggler)
     s = Session(waitsession(smuggler), smuggler.serializer)
     push!(smuggler.sessions, s)
-    s
+    return s
 end
 function Base.close(smuggler::Smuggler, session::Session)
     close(session)
-    pop!(smuggler.sessions, session)
+    return pop!(smuggler.sessions, session)
 end
 function Base.close(s::Smuggler)
     for session in sessions(s)
         close(session)
     end
     empty!(sessions(s))
-    close(vessel(s))
+    return close(vessel(s))
 end
 
 # Like `sprint()`, but uses IOContext properties `ctx_properties`
@@ -118,7 +118,7 @@ function sprint_ctx(f, session)
     io = IOBuffer()
     ctx = IOContext(io, :module => session.evaluatein)
     f(ctx)
-    String(take!(io))
+    return String(take!(io))
 end
 
 include("eval.jl")
@@ -145,6 +145,7 @@ function evaluate_entries(session)
             end
         end
     end
+    return
 end
 
 """
@@ -156,18 +157,18 @@ function treatrequest end
 function treatrequest(::Val{:interrupt}, session, repl_backend, msgid)
     @debug "Scheduling an interrupt." session repl_backend
     schedule(repl_backend, InterruptException(); error = true)
-    put!(session.responsechannel, Protocols.Result(msgid, "Done."))
+    return put!(session.responsechannel, Protocols.Result(msgid, "Done."))
 end
 function treatrequest(::Val{:eval}, session, repl_backend, msgid, file, line, code)
     @debug "Adding an entry." msgid file line session repl_backend
-    put!(session.entrychannel, (msgid, file, line, code))
+    return put!(session.entrychannel, (msgid, file, line, code))
 end
 function treatrequest(::Val{:exit}, session, repl_backend, msgid)
     @debug "Scheduling an interrupt." session repl_backend
     schedule(repl_backend, InterruptException(); error = true)
     @debug "Exiting" session repl_backend
     close(session)
-    put!(session.responsechannel, Protocols.Result(msgid, "Done."))
+    return put!(session.responsechannel, Protocols.Result(msgid, "Done."))
 end
 function treatrequest(::Val{:configure}, session, repl_backend, msgid, settings)
     @debug "Configuring" session repl_backend settings
@@ -185,6 +186,7 @@ function treatrequest(::Val{:configure}, session, repl_backend, msgid, settings)
             session.sessionparams[k] = settings[k]
         end
     end
+    return
 end
 """
 Dispatch repeatedly the incoming requests of a session.
@@ -205,12 +207,13 @@ function deserialize_requests(session::Session, repl_backend)
             end
         end
     end
+    return
 end
 """
 Send repeatedly the responses of a given session.
 """
 function serialize_responses(session)
-    try
+    return try
         while true
             response = take!(session.responsechannel)
             @debug "Response is" response
@@ -229,7 +232,7 @@ responses and deserialize the requests.
 """
 function serve_repl_session(session)
     put!(session.responsechannel, Protocols.Handshake())
-    @sync begin
+    return @sync begin
         repl_backend = @async try
             evaluate_entries(session)
         catch exc
@@ -261,7 +264,7 @@ end
 Serve sessions to clients connecting to a server.
 """
 function serve_repl(smuggler::Smuggler)
-    @async try
+    return @async try
         while isopen(smuggler)
             session = getsession(smuggler)
             @async try
