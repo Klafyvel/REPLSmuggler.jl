@@ -132,7 +132,9 @@ function evaluate_entry(session, msgid, file, line, value, repl = Base.active_re
             if isnothing(index_mime)
                 io = IOBuffer()
                 ctx = IOContext(io, [k => v for (k, v) in session.sessionparams["iocontext"]]...)
-                Base.invokelatest(show, ctx, MIME("text/plain"), first(repl_response))
+                try
+                    Base.invokelatest(show, ctx, MIME("text/plain"), first(repl_response))
+                end
                 put!(session.responsechannel, Protocols.Result(msgid, current_line, String(take!(io))))
             else
                 mkpath(session.sessionparams["showdir"])
