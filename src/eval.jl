@@ -134,6 +134,8 @@ function evaluate_entry(session, msgid, file, line, value, repl = Base.active_re
                 ctx = IOContext(io, [k => v for (k, v) in session.sessionparams["iocontext"]]...)
                 try
                     Base.invokelatest(show, ctx, MIME("text/plain"), first(repl_response))
+                catch exception
+                    nothing
                 end
                 put!(session.responsechannel, Protocols.Result(msgid, current_line, String(take!(io))))
             else
