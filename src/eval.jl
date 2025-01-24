@@ -132,6 +132,13 @@ function evaluate_entry(session, msgid, file, line, value, repl = Base.active_re
             if isnothing(index_mime)
                 io = IOBuffer()
                 ctx = IOContext(io, [k => v for (k, v) in session.sessionparams["iocontext"]]...)
+                #=
+                julia can run an expression and return an object. The returned object could be
+                lazy and error only when showing it in REPL. This will crash smuggler .
+                example: [(1,2)]'
+                So we wrap this in a try. Showing errors are still thrown and printed to the repl.
+                we do not do anything with the exception.
+                =#
                 try
                     Base.invokelatest(show, ctx, MIME("text/plain"), first(repl_response))
                 catch exception
@@ -141,7 +148,11 @@ function evaluate_entry(session, msgid, file, line, value, repl = Base.active_re
             else
                 mkpath(session.sessionparams["showdir"])
                 filepath, io = mktemp(session.sessionparams["showdir"], cleanup = false)
-                Base.invokelatest(show, io, Protocols.IMAGE_MIME[index_mime], first(repl_response))
+                try
+                    Base.invokelatest(show, io, Protocols.IMAGE_MIME[index_mime], first(repl_response))
+                catch exception
+                    nothing
+                end
                 close(io)
                 put!(session.responsechannel, Protocols.Result(msgid, current_line, Protocols.IMAGE_MIME[index_mime], filepath))
             end
