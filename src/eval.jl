@@ -151,7 +151,7 @@ function evaluate_entry(session, msgid, file, line, value, repl = Base.active_re
                 try
                     Base.invokelatest(show, io, Protocols.IMAGE_MIME[index_mime], first(repl_response))
                 catch exception
-                    @warn "failed to invoke `show` on repl_response" , exception
+                    @warn "failed to invoke `show` on repl_response", exception
                 end
                 close(io)
                 put!(session.responsechannel, Protocols.Result(msgid, current_line, Protocols.IMAGE_MIME[index_mime], filepath))
