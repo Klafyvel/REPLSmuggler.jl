@@ -9,24 +9,6 @@ Base.IteratorSize(::Type{StatementsIterator}) = Base.SizeUnknown()
 Base.IteratorEltype(::Type{StatementsIterator}) = Base.HasEltype()
 Base.eltype(::Type{StatementsIterator}) = String
 
-function softscope(@nospecialize ex)
-    if ex isa Expr
-        h = ex.head
-        if h === :toplevel
-            ex′ = Expr(h)
-            map!(softscope, resize!(ex′.args, length(ex.args)), ex.args)
-            return ex′
-        elseif h in (:meta, :import, :using, :export, :module, :error, :incomplete, :thunk)
-            return ex
-        elseif h === :global && all(x->isa(x, Symbol), ex.args)
-            return ex
-        else
-            return Expr(:block, Expr(:softscope, true), ex)
-        end
-    end
-    return ex
-end
-
 function Base.iterate(s::StatementsIterator, current_index = 1)
     if current_index > lastindex(s.evalstring)
         return nothing
@@ -125,7 +107,7 @@ function evaluate_entry(session, msgid, file, line, value, repl = Base.active_re
         REPL.history_reset_state(repl.mistate.current_mode.hist)
 
         expr = Meta.parseall(eval_string)
-        expr = softscope(expr)
+        expr = REPL.softscope(expr)
         # Now we put the correct file name and line number on the parsed
         # expression.
         renumber_evaluated_expression!(expr, current_line, file)
