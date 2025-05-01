@@ -107,6 +107,7 @@ function evaluate_entry(session, msgid, file, line, value, repl = Base.active_re
         REPL.history_reset_state(repl.mistate.current_mode.hist)
 
         expr = Meta.parseall(eval_string)
+        expr = REPL.softscope(expr)
         # Now we put the correct file name and line number on the parsed
         # expression.
         renumber_evaluated_expression!(expr, current_line, file)
