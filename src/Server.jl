@@ -10,6 +10,7 @@ module Server
 using REPL
 
 using ..Protocols
+using ..Editor
 
 export Session, Smuggler, serve_repl
 
@@ -41,6 +42,9 @@ end
 const DEFAULT_SESSION_DICT = Dict(
     "evalbyblocks" => false, "showdir" => tempdir(), "enableimages" => true,
     "iocontext" => Dict{Symbol, Any}(),
+    # Address the client (typically nvim) listens on for RPC, so `@edit` can
+    # open files in the same editor instance. Empty disables the integration.
+    "editorsocket" => "",
 )
 Session(specific, serializer) = Session(
     Channel(1),
@@ -55,6 +59,7 @@ function Base.show(io::IO, ::Session{T}) where {T}
 end
 Base.isopen(s::Session) = isopen(s.smugglerspecific)
 function Base.close(s::Session)
+    Editor.forget(s)
     close(s.entrychannel)
     close(s.responsechannel)
     return close(s.smugglerspecific)
@@ -185,6 +190,9 @@ function treatrequest(::Val{:configure}, session, repl_backend, msgid, settings)
             end
             session.sessionparams[k] = settings[k]
         end
+    end
+    if haskey(settings, "editorsocket")
+        Editor.register(session, session.sessionparams["editorsocket"])
     end
     return
 end

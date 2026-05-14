@@ -32,6 +32,9 @@ end
 include("Protocols.jl")
 using .Protocols
 
+include("Editor.jl")
+using .Editor
+
 include("Server.jl")
 using .Server
 

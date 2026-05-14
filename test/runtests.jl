@@ -7,6 +7,7 @@ using Aqua
         Aqua.test_all(REPLSmuggler)
     end
     include("protocol.jl")
+    include("editor.jl")
     include("msgpackserializer.jl")
     include("evaltests.jl")
 end
