@@ -42,9 +42,10 @@ end
 const DEFAULT_SESSION_DICT = Dict(
     "evalbyblocks" => false, "showdir" => tempdir(), "enableimages" => true,
     "iocontext" => Dict{Symbol, Any}(),
-    # Address the client (typically nvim) listens on for RPC, so `@edit` can
-    # open files in the same editor instance. Empty disables the integration.
-    "editorsocket" => "",
+    # Regex (as a string) matching the client's editor name. When non-empty,
+    # the server routes `@edit` back through this session via an `edit`
+    # notification instead of letting Julia spawn a nested editor.
+    "editorpattern" => "",
 )
 Session(specific, serializer) = Session(
     Channel(1),
@@ -191,8 +192,14 @@ function treatrequest(::Val{:configure}, session, repl_backend, msgid, settings)
             session.sessionparams[k] = settings[k]
         end
     end
-    if haskey(settings, "editorsocket")
-        Editor.register(session, session.sessionparams["editorsocket"])
+    if haskey(settings, "editorpattern")
+        pattern = session.sessionparams["editorpattern"]
+        if isempty(pattern)
+            Editor.forget(session)
+        else
+            Editor.register(session)
+            Editor.install!(pattern)
+        end
     end
     return
 end

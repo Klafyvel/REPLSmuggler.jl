@@ -1,106 +1,111 @@
 """
-Integration of Julia's `@edit` / `InteractiveUtils.edit` with a connected
-nvim-smuggler client.
+Bridge between Julia's `InteractiveUtils.edit` / `@edit` and connected
+REPLSmuggler clients.
 
-When a client (typically Neovim) ships an `editorsocket` setting via the
-`configure` request, REPLSmuggler can drive that running editor to open the
-file at the right line, instead of spawning a nested editor in the Julia
-REPL's terminal.
+When a client opts in by sending a non-empty `editorpattern` setting via the
+`configure` request, the server installs an `InteractiveUtils` editor callback
+for that pattern. When `EDITOR` matches the pattern, an `edit` notification is
+sent back over the existing session channel instead of spawning a nested
+editor in the REPL's terminal — leaving each client free to open the file in
+whatever way is idiomatic for its host editor.
 
-The integration is opt-in (the setting defaults to ""), and is non-breaking:
-older Julia servers silently drop unknown settings keys.
+The integration is fully editor-agnostic on the server side: REPLSmuggler does
+not call into any editor binary directly. The pattern (and the open-on-edit
+behaviour) is entirely the client's responsibility.
 """
 module Editor
 
 using InteractiveUtils
 
-"Maps a session id (objectid of the Session) to its editor socket path."
-const SESSION_SOCKETS = Dict{UInt, String}()
+using ..Protocols
 
-"Stack of session ids in registration order; most recent wins on `@edit`."
-const SESSION_ORDER = UInt[]
+"Stack of sessions that have registered interest; most recent wins on `@edit`."
+const SESSION_STACK = Any[]
 
-"Set to `true` after the first call to `register`."
-const REGISTERED = Ref(false)
+"Set of patterns already installed with `InteractiveUtils.define_editor`."
+const INSTALLED_PATTERNS = Set{String}()
+
+# `true` exits 0 on Unix; on Windows the `cd.` builtin is a portable no-op.
+const _NOOP_CMD = Sys.iswindows() ? `cmd /c cd.` : `true`
 
 """
-    register(session, socket::AbstractString)
+    register(session)
 
-Record that `session` is being driven by an editor listening on `socket`.
-Idempotent. Installs the `define_editor` hook on first call.
+Record that `session` wants `@edit` routed back through it. Idempotent;
+re-registering bumps the session to the top of the stack so the most recently
+configured session wins when multiple are connected.
 """
-function register(session, socket::AbstractString)
-    id = objectid(session)
-    if isempty(socket)
-        forget(session)
-        return
-    end
-    SESSION_SOCKETS[id] = String(socket)
-    # Move id to top of order stack (most recent wins).
-    filter!(!=(id), SESSION_ORDER)
-    push!(SESSION_ORDER, id)
-    install!()
+function register(session)
+    filter!(s -> !(s === session), SESSION_STACK)
+    push!(SESSION_STACK, session)
     return
 end
 
 """
     forget(session)
 
-Drop any editor socket associated with `session` (e.g. on disconnect).
+Drop `session` from the stack (e.g. on disconnect). Safe to call for sessions
+that were never registered.
 """
 function forget(session)
-    id = objectid(session)
-    delete!(SESSION_SOCKETS, id)
-    filter!(!=(id), SESSION_ORDER)
+    filter!(s -> !(s === session), SESSION_STACK)
     return
 end
 
-"Return the most-recently-registered editor socket, or an empty string if none."
-function current_socket()
-    while !isempty(SESSION_ORDER)
-        id = last(SESSION_ORDER)
-        sock = get(SESSION_SOCKETS, id, "")
-        if !isempty(sock)
-            return sock
+"Return the most-recently-registered live session, or `nothing` if none."
+function current_session()
+    while !isempty(SESSION_STACK)
+        s = last(SESSION_STACK)
+        if isopen(s)
+            return s
         end
-        pop!(SESSION_ORDER)
+        pop!(SESSION_STACK)
     end
-    return ""
+    return nothing
 end
 
 """
     smuggler_edit(cmd, path, line)
 
-Editor action registered with `InteractiveUtils.define_editor`. When a smuggler
-session has provided an `editorsocket`, route the edit to that running nvim
-via `--remote-expr`, driving `:tabedit` with `fnameescape` so paths with
-spaces or special characters work. Falls back to a normal nvim invocation
-when no socket is configured.
-
-`--remote-tab*` does not honor the `+cmd` syntax (it treats `+42` as a file
-name), so we cannot use it to jump to a line — `--remote-expr` is required.
+Editor callback registered via `InteractiveUtils.define_editor`. When a
+session is registered, send an `edit` notification on its response channel
+and return a no-op `Cmd` so Julia does not also spawn the user's `EDITOR`.
+With no session registered, fall back to the conventional `cmd +line path`
+form so the user's `EDITOR` still works.
 """
 function smuggler_edit(cmd, path, line)
-    sock = current_socket()
-    if isempty(sock)
+    session = current_session()
+    if session === nothing
         return line > 0 ? `$cmd +$line $path` : `$cmd $path`
     end
-    # Embed `path` in a Vimscript single-quoted string literal — Vim escapes
-    # single quotes by doubling them.
-    escaped_path = replace(path, "'" => "''")
-    expr = if line > 0
-        "execute('tabedit +$(line) ' . fnameescape('$(escaped_path)'))"
-    else
-        "execute('tabedit ' . fnameescape('$(escaped_path)'))"
+    notification = Protocols.EditRequest(path, line)
+    try
+        put!(session.responsechannel, notification)
+    catch exc
+        # Session may have been closed between current_session() and put!;
+        # fall through to a local editor invocation rather than erroring out
+        # of the user's `@edit` call.
+        if exc isa InvalidStateException
+            forget(session)
+            return line > 0 ? `$cmd +$line $path` : `$cmd $path`
+        end
+        rethrow()
     end
-    return `nvim --server $sock --remote-expr $expr`
+    return _NOOP_CMD
 end
 
-"Register `smuggler_edit` with InteractiveUtils on first call. Idempotent."
-function install!()
-    REGISTERED[] && return
-    InteractiveUtils.define_editor(smuggler_edit, r"nvim"; wait = false)
-    REGISTERED[] = true
+"""
+    install!(pattern::AbstractString)
+
+Register `smuggler_edit` with `InteractiveUtils.define_editor` for the given
+editor name `pattern` (anchored anywhere in the user's `EDITOR`). Idempotent:
+the same `pattern` is only installed once per Julia session.
+"""
+function install!(pattern::AbstractString)
+    key = String(pattern)
+    key in INSTALLED_PATTERNS && return
+    InteractiveUtils.define_editor(smuggler_edit, Regex(key); wait = false)
+    push!(INSTALLED_PATTERNS, key)
     return
 end
 

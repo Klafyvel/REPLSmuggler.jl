@@ -42,13 +42,19 @@ server, it will raise an error.
 - `configure`: Configure the current session.
   Parameters:
   - `settings::Dict{String, Any}`
-  Settings do not have to be given in the request if you are not changing them. 
+  Settings do not have to be given in the request if you are not changing them.
   Currently, the following settings are supported:
     - `evalbyblocks::Bool` should the session evaluate entries by block rather than
   by toplevel statements?
     - `showdir::String`: directory to store images.
     - `enableimages::String`: Should we display objects displayable as images be showed as images?
     - `iocontext::Dict{String,Any}`: IOContext options for `show`.
+    - `editorpattern::String`: Regex pattern (as a string) matching the client's
+      editor name (e.g. `"nvim"`, `"emacs"`). When non-empty, the server installs
+      an `InteractiveUtils` editor callback so that `@edit` / `InteractiveUtils.edit`
+      routes back through this session via an `edit` notification (see below)
+      instead of spawning a nested editor in the Julia REPL. An empty string
+      (the default) opts out and restores Julia's normal `EDITOR` behaviour.
 - `interrupt`: Interrupt the current evaluation.
   No parameter.
 - `exit`: Stop the current session.
@@ -78,9 +84,9 @@ Currently, the following notifications can be sent by the server. If a notificat
     could be replaced if other implementations of the protocol were to exist.
   - `version::String`: A [sementic versioning](https://semver.org/) version number
     telling the client which version of the protocol is being used by the server.
-- `diagnostic`: Sent following the evaluation of some code by the user from the 
+- `diagnostic`: Sent following the evaluation of some code by the user from the
    REPL. For example, this could be used via a direct call to display a diagnostic
-   on a specific line, or to report an exception from some code evaluated by the 
+   on a specific line, or to report an exception from some code evaluated by the
    user, or report diagnostic from other packages such as `JET.jl`. This is very
    similar to how an exception would be handled when executing code.
    Parameters:
@@ -88,6 +94,16 @@ Currently, the following notifications can be sent by the server. If a notificat
    - `diagnostic::String`: The diagnostic that is to be displayed.
    - `stacktrace::Vector{Tuple{String, UInt32, String}}`: The stacktrace, with
    each row being `(file, line, function)`.
+- `edit`: Ask the client to open a file at a given line. Sent when the user
+   invokes `@edit` / `InteractiveUtils.edit` from the REPL and the session has
+   previously enabled this via the `editorpattern` configure setting. The
+   server-side `InteractiveUtils` callback only fires when `EDITOR` matches the
+   pattern the client provided, so clients that connect with `editorpattern = ""`
+   never receive these notifications. Each client decides how to open the file
+   (in nvim, by `:tabedit +<line> <path>`; other editors will use their own
+   conventions). Parameters:
+   - `path::String`: Absolute path of the file to open.
+   - `line::UInt32`: 1-based line to jump to, or `0` for "no specific line".
 
 ## Typical session:
 
@@ -110,7 +126,7 @@ using ..REPLSmuggler: stringify_error
 "Name of the protocol implementation."
 const PROTOCOL_MAGIC = "REPLSmuggler"
 "Protocol version."
-const PROTOCOL_VERSION = v"0.5"
+const PROTOCOL_VERSION = v"0.6"
 
 "Supported image MIME types."
 const IMAGE_MIME = [
@@ -276,6 +292,19 @@ function Diagnostic(title, diagnostic, stackframe)
     return Notification(
         "diagnostic",
         [title, diagnostic, stackframe],
+    )
+end
+
+"""
+    EditRequest(path, line)
+
+Ask the client to open `path` at `line`. See the `edit` notification in the
+protocol's docstring. Pass `line = 0` for "no specific line".
+"""
+function EditRequest(path::AbstractString, line::Integer)
+    return Notification(
+        "edit",
+        Any[String(path), trunc(UInt32, max(line, 0))],
     )
 end
 

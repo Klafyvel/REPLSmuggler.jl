@@ -2,30 +2,33 @@ using REPLSmuggler
 using InteractiveUtils
 
 const Editor = REPLSmuggler.Editor
+const Protocols = REPLSmuggler.Protocols
 
-# Reset the module's globals so this testset is independent of any other state
-# that might exist from previous tests in the same Julia session.
+# Minimal stand-in for a `Server.Session`: `current_session` needs `isopen`,
+# and `smuggler_edit` needs `responsechannel`. Mutating `open` flips it closed.
+mutable struct FakeSession
+    responsechannel::Channel
+    open::Bool
+end
+make_fake_session() = FakeSession(Channel(8), true)
+Base.isopen(s::FakeSession) = s.open
+
 function reset_editor_state!()
-    empty!(Editor.SESSION_SOCKETS)
-    empty!(Editor.SESSION_ORDER)
+    empty!(Editor.SESSION_STACK)
     return
 end
 
-# `register` keys sessions by `objectid`, so any mutable instance works as a
-# stand-in for a real `Server.Session` here.
-make_fake_session() = Ref{Int}(0)
-
 @testset "Editor.jl" begin
-    @testset "register / current_socket / forget" begin
+    @testset "register / current_session / forget" begin
         reset_editor_state!()
-        @test Editor.current_socket() == ""
+        @test Editor.current_session() === nothing
 
-        s1 = make_fake_session()
-        Editor.register(s1, "/tmp/nvim-1.sock")
-        @test Editor.current_socket() == "/tmp/nvim-1.sock"
+        s = make_fake_session()
+        Editor.register(s)
+        @test Editor.current_session() === s
 
-        Editor.forget(s1)
-        @test Editor.current_socket() == ""
+        Editor.forget(s)
+        @test Editor.current_session() === nothing
     end
 
     @testset "most-recently-registered wins" begin
@@ -33,32 +36,20 @@ make_fake_session() = Ref{Int}(0)
         s1 = make_fake_session()
         s2 = make_fake_session()
 
-        Editor.register(s1, "/tmp/a.sock")
-        Editor.register(s2, "/tmp/b.sock")
-        @test Editor.current_socket() == "/tmp/b.sock"
+        Editor.register(s1)
+        Editor.register(s2)
+        @test Editor.current_session() === s2
 
-        # Re-registering s1 bumps it to the top of the order stack.
-        Editor.register(s1, "/tmp/a.sock")
-        @test Editor.current_socket() == "/tmp/a.sock"
+        # Re-registering s1 bumps it to the top of the stack.
+        Editor.register(s1)
+        @test Editor.current_session() === s1
 
         # Forgetting the top exposes the next one down.
         Editor.forget(s1)
-        @test Editor.current_socket() == "/tmp/b.sock"
+        @test Editor.current_session() === s2
 
         Editor.forget(s2)
-        @test Editor.current_socket() == ""
-    end
-
-    @testset "register with empty string forgets" begin
-        reset_editor_state!()
-        s = make_fake_session()
-        Editor.register(s, "/tmp/x.sock")
-        @test Editor.current_socket() == "/tmp/x.sock"
-
-        # Empty socket is the documented way for a client to opt out.
-        Editor.register(s, "")
-        @test Editor.current_socket() == ""
-        @test !haskey(Editor.SESSION_SOCKETS, objectid(s))
+        @test Editor.current_session() === nothing
     end
 
     @testset "forget is safe for unknown sessions" begin
@@ -66,37 +57,76 @@ make_fake_session() = Ref{Int}(0)
         s = make_fake_session()
         # Shouldn't throw even though `s` was never registered.
         Editor.forget(s)
-        @test Editor.current_socket() == ""
+        @test Editor.current_session() === nothing
     end
 
-    @testset "smuggler_edit Cmd construction" begin
+    @testset "closed sessions are skipped" begin
         reset_editor_state!()
+        s1 = make_fake_session()
+        s2 = make_fake_session()
+        Editor.register(s1)
+        Editor.register(s2)
+        s2.open = false
+        # `current_session` should pop the closed one and surface s1.
+        @test Editor.current_session() === s1
+        @test length(Editor.SESSION_STACK) == 1
+    end
 
-        # No session → fall back to a normal local nvim invocation.
+    @testset "smuggler_edit sends notification when session registered" begin
+        reset_editor_state!()
+        s = make_fake_session()
+        Editor.register(s)
+
+        cmd = Editor.smuggler_edit(`nvim`, "foo.jl", 42)
+        @test cmd == Editor._NOOP_CMD
+
+        notification = take!(s.responsechannel)
+        @test notification isa Protocols.Notification
+        @test notification.method == "edit"
+        @test notification.params == Any["foo.jl", UInt32(42)]
+
+        # line = 0 means "no specific line" — gets clamped to UInt32(0).
+        Editor.smuggler_edit(`nvim`, "bar.jl", 0)
+        n2 = take!(s.responsechannel)
+        @test n2.params == Any["bar.jl", UInt32(0)]
+    end
+
+    @testset "smuggler_edit falls back without session" begin
+        reset_editor_state!()
         @test Editor.smuggler_edit(`nvim`, "foo.jl", 42) == `nvim +42 foo.jl`
         @test Editor.smuggler_edit(`nvim`, "foo.jl", 0) == `nvim foo.jl`
-
-        # With a session → drive the remote nvim via --remote-expr / :tabedit.
-        # `--remote-tab*` swallows `+cmd` as a filename (see comment in
-        # Editor.smuggler_edit), so this must go through fnameescape.
-        s = make_fake_session()
-        Editor.register(s, "/tmp/remote.sock")
-        @test Editor.smuggler_edit(`nvim`, "foo.jl", 42) == `nvim --server /tmp/remote.sock --remote-expr "execute('tabedit +42 ' . fnameescape('foo.jl'))"`
-        @test Editor.smuggler_edit(`nvim`, "foo.jl", 0) == `nvim --server /tmp/remote.sock --remote-expr "execute('tabedit ' . fnameescape('foo.jl'))"`
-
-        # Paths with single quotes are embedded via Vimscript's '' escape.
-        @test Editor.smuggler_edit(`nvim`, "weird's.jl", 7) == `nvim --server /tmp/remote.sock --remote-expr "execute('tabedit +7 ' . fnameescape('weird''s.jl'))"`
+        # Fallback works for any editor binary — that's the point of decoupling
+        # the open-on-edit behaviour from the server.
+        @test Editor.smuggler_edit(`emacs`, "foo.jl", 7) == `emacs +7 foo.jl`
     end
 
-    @testset "install! is idempotent" begin
-        # Calling install! repeatedly must not register multiple callbacks with
-        # InteractiveUtils — otherwise every `@edit` call would invoke our
+    @testset "smuggler_edit falls back if channel was closed" begin
+        reset_editor_state!()
+        s = make_fake_session()
+        Editor.register(s)
+        close(s.responsechannel)
+
+        cmd = Editor.smuggler_edit(`nvim`, "foo.jl", 5)
+        @test cmd == `nvim +5 foo.jl`
+        # The dead session is auto-forgotten so subsequent calls don't retry.
+        @test Editor.current_session() === nothing
+    end
+
+    @testset "install! is idempotent per pattern" begin
+        # Installing the same pattern twice must not register multiple callbacks
+        # with InteractiveUtils — otherwise every `@edit` call would invoke our
         # action N times.
-        Editor.install!()
+        Editor.install!("nvim")
         before = length(InteractiveUtils.EDITOR_CALLBACKS)
-        Editor.install!()
-        Editor.install!()
+        Editor.install!("nvim")
+        Editor.install!("nvim")
         @test length(InteractiveUtils.EDITOR_CALLBACKS) == before
-        @test Editor.REGISTERED[]
+        @test "nvim" in Editor.INSTALLED_PATTERNS
+
+        # A different pattern adds a separate callback — supporting clients for
+        # other editors (emacs, helix, ...) connecting to the same server.
+        Editor.install!("emacs")
+        @test length(InteractiveUtils.EDITOR_CALLBACKS) == before + 1
+        @test "emacs" in Editor.INSTALLED_PATTERNS
     end
 end
