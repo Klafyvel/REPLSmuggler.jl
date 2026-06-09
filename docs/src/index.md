@@ -88,6 +88,12 @@ Modules = [REPLSmuggler.Protocols]
 Modules = [REPLSmuggler.Server]
 ```
 
+### Editor integration
+
+```@autodocs
+Modules = [REPLSmuggler.Editor]
+```
+
 ### Default implementation
 
 ```@autodocs
