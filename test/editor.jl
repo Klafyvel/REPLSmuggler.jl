@@ -2,7 +2,6 @@ using REPLSmuggler
 using InteractiveUtils
 
 const Editor = REPLSmuggler.Editor
-const Protocols = REPLSmuggler.Protocols
 
 # Minimal stand-in for a `Server.Session`: `current_session` needs `isopen`,
 # and `smuggler_edit` needs `responsechannel`. Mutating `open` flips it closed.
@@ -81,7 +80,7 @@ end
         @test cmd == Editor._NOOP_CMD
 
         notification = take!(s.responsechannel)
-        @test notification isa Protocols.Notification
+        @test notification isa REPLSmuggler.Protocols.Notification
         @test notification.method == "edit"
         @test notification.params == Any["foo.jl", UInt32(42)]
 
