@@ -25,6 +25,19 @@ using REPLSmuggler
 smuggle()
 ```
 
+## Editor integration for `@edit`
+
+When a client opts in by sending a non-empty `editorpattern` setting via the
+`configure` request, REPLSmuggler intercepts `@edit` / `InteractiveUtils.edit`
+and sends an `edit` notification back over the existing session channel
+instead of spawning a nested editor in the REPL's terminal. The client decides
+how to open the file (in nvim, by `:tabedit +<line> <path>`; other clients
+will use their own conventions). The integration is editor-agnostic on the
+server side: REPLSmuggler never calls into an editor binary directly.
+
+See the protocol docstring for details, or the [companion NeoVim
+plugin](https://github.com/klafyvel/nvim-smuggler) for a reference client.
+
 ## See also
 
 Have a look at [the companion plugin for NeoVim](https://github.com/klafyvel/nvim-smuggler).

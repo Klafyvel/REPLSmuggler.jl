@@ -10,6 +10,7 @@ module Server
 using REPL
 
 using ..Protocols
+using ..Editor
 
 export Session, Smuggler, serve_repl
 
@@ -41,6 +42,10 @@ end
 const DEFAULT_SESSION_DICT = Dict(
     "evalbyblocks" => false, "showdir" => tempdir(), "enableimages" => true,
     "iocontext" => Dict{Symbol, Any}(),
+    # Regex (as a string) matching the client's editor name. When non-empty,
+    # the server routes `@edit` back through this session via an `edit`
+    # notification instead of letting Julia spawn a nested editor.
+    "editorpattern" => "",
 )
 Session(specific, serializer) = Session(
     Channel(1),
@@ -55,6 +60,7 @@ function Base.show(io::IO, ::Session{T}) where {T}
 end
 Base.isopen(s::Session) = isopen(s.smugglerspecific)
 function Base.close(s::Session)
+    Editor.forget(s)
     close(s.entrychannel)
     close(s.responsechannel)
     return close(s.smugglerspecific)
@@ -184,6 +190,15 @@ function treatrequest(::Val{:configure}, session, repl_backend, msgid, settings)
                 settings[k] = Dict([Symbol(k) => v for (k, v) in settings[k]])
             end
             session.sessionparams[k] = settings[k]
+        end
+    end
+    if haskey(settings, "editorpattern")
+        pattern = session.sessionparams["editorpattern"]
+        if isempty(pattern)
+            Editor.forget(session)
+        else
+            Editor.register(session)
+            Editor.install!(pattern)
         end
     end
     return
